@@ -36,7 +36,7 @@ export default function LoginScreen() {
       await storeToken(data.access_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
       Alert.alert('Success', `Welcome ${data.user.name}`);
-      router.replace('/(tabs)');
+      router.replace('/sessions');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       Alert.alert('Error', errorMessage);

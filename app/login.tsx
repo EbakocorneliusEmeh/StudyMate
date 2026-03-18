@@ -16,7 +16,8 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import { supabase } from '../src/lib/supabase';
 import { login } from '../src/api/auth';
 import { storeToken } from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
@@ -27,14 +28,47 @@ export default function LoginScreen() {
   // States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorText, setErrorText] = useState<string | null>(null); // New Error State
 
-  // Clear error message when the user starts typing again
+  // Handle OAuth callback from Supabase
   useEffect(() => {
-    if (errorText) setErrorText(null);
-  }, [email, password]);
+    const subscription = WebBrowser.addEventListener(
+      'url',
+      async (event: WebBrowser.WebBrowserRedirectEvent) => {
+        const url = event.url;
+        if (url.includes('auth/callback') || url.includes('access_token')) {
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (session) {
+              await storeToken(session.access_token);
+              await AsyncStorage.setItem(
+                'user',
+                JSON.stringify({
+                  id: session.user.id,
+                  email: session.user.email,
+                  name:
+                    session.user.user_metadata?.full_name ||
+                    session.user.email?.split('@')[0] ||
+                    'User',
+                }),
+              );
+              Alert.alert(
+                'Success',
+                `Welcome ${session.user.user_metadata?.full_name || 'User'}`,
+              );
+              router.replace('/(tabs)');
+            }
+          } catch (err) {
+            console.error('OAuth callback error:', err);
+          }
+        }
+      },
+    );
+
+    return () => subscription.remove();
+  }, []);
 
   const handleLogin = async () => {
     setErrorText(null);
@@ -187,7 +221,6 @@ export default function LoginScreen() {
   );
 }
 
-// Styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7f6f8', paddingTop: 20 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },

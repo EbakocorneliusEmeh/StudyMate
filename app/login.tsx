@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import {
   View,
   TextInput,
   Text,
-  Alert,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
@@ -11,35 +10,55 @@ import {
   Platform,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons'; // For visibility icon
+import { Ionicons } from '@expo/vector-icons';
 import { login } from '../src/api/auth';
 import { storeToken } from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function LoginScreen() {
   const router = useRouter();
+
+  // States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null); // New Error State
+
+  // Clear error message when the user starts typing again
+  useEffect(() => {
+    if (errorText) setErrorText(null);
+  }, [email, password]);
 
   const handleLogin = async () => {
+    setErrorText(null);
+
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorText('Please fill in all fields.');
       return;
     }
+
+    setIsLoading(true);
+
     try {
       const data = await login({ email, password });
       await storeToken(data.access_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      Alert.alert('Success', `Welcome ${data.user.name}`);
       router.replace('/sessions');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      Alert.alert('Error', errorMessage);
+    } catch (err: any) {
+      // Extract specific message from your NestJS AuthService
+      const message =
+        err?.response?.data?.message || err.message || 'Login failed';
+
+      // If NestJS returns an array of errors (from DTO validation), pick the first one
+      setErrorText(Array.isArray(message) ? message[0] : message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,8 +68,10 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Back Button */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
@@ -58,10 +79,13 @@ export default function LoginScreen() {
             <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
 
-          {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
-              <Image source={logoImg} style={styles.logo} />
+              <Image
+                source={logoImg}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
@@ -69,7 +93,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Form Section */}
           <View style={styles.form}>
             <Text style={styles.label}>Email Address</Text>
             <TextInput
@@ -80,6 +103,7 @@ export default function LoginScreen() {
               placeholder="name@example.com"
               placeholderTextColor="#94a3b8"
               style={styles.input}
+              editable={!isLoading}
             />
 
             <Text style={styles.label}>Password</Text>
@@ -91,6 +115,7 @@ export default function LoginScreen() {
                 placeholder="Enter your password"
                 placeholderTextColor="#94a3b8"
                 style={styles.passwordInput}
+                editable={!isLoading}
               />
               <TouchableOpacity
                 onPress={() => setPasswordVisible(!isPasswordVisible)}
@@ -104,35 +129,50 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.forgotPass}>
+            <TouchableOpacity style={styles.forgotPass} disabled={isLoading}>
               <Text style={styles.forgotPassText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* Main Action Button */}
+            {/* --- ERROR MESSAGE DISPLAY --- */}
+            {errorText ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                <Text style={styles.errorLabel}>{errorText}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleLogin}
-              style={styles.buttonShadow}
+              disabled={isLoading}
+              style={[styles.buttonShadow, isLoading && { opacity: 0.8 }]}
             >
               <LinearGradient
-                colors={['#7f13ec', '#6366f1']}
+                colors={
+                  isLoading ? ['#94a3b8', '#64748b'] : ['#7f13ec', '#6366f1']
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.primaryButton}
               >
-                <Text style={styles.buttonText}>Login</Text>
-                <Ionicons name="log-in-outline" size={20} color="white" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Login</Text>
+                    <Ionicons name="log-in-outline" size={20} color="white" />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          {/* Footer Link */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               New to StudyMate?{' '}
               <Text
-                style={styles.link}
-                onPress={() => router.push('/register')}
+                style={[styles.link, isLoading && { color: '#94a3b8' }]}
+                onPress={() => !isLoading && router.push('/register')}
               >
                 Create an account
               </Text>
@@ -145,7 +185,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f6f8', paddingTop: 20 }, // background-light
+  container: { flex: 1, backgroundColor: '#f7f6f8', paddingTop: 20 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
   backButton: {
     marginTop: 20,
@@ -163,12 +203,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#0f172a',
-    textAlign: 'center',
-  },
+  logo: { width: 45, height: 45 },
+  title: { fontSize: 32, fontWeight: '700', color: '#0f172a' },
   subtitle: {
     fontSize: 16,
     color: '#64748b',
@@ -205,6 +241,25 @@ const styles = StyleSheet.create({
   eyeIcon: { paddingRight: 16 },
   forgotPass: { alignSelf: 'flex-end', marginTop: 8, marginBottom: 24 },
   forgotPassText: { color: '#7f13ec', fontWeight: '600', fontSize: 14 },
+
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 8,
+  },
+  errorLabel: {
+    color: '#b91c1c',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+
   buttonShadow: {
     shadowColor: '#7f13ec',
     shadowOffset: { width: 0, height: 10 },
@@ -224,9 +279,4 @@ const styles = StyleSheet.create({
   footer: { marginTop: 40, alignItems: 'center' },
   footerText: { color: '#64748b', fontSize: 14 },
   link: { color: '#7f13ec', fontWeight: '700' },
-  logo: {
-    width: 55,
-    height: 55,
-    tintColor: '#7f13ec', // If using a template icon
-  },
 });

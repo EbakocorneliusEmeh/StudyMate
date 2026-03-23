@@ -1,7 +1,7 @@
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.172:3000';
+    : process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.5:3000';
 
 export interface StudySession {
   id: string;

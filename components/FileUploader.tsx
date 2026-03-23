@@ -1,0 +1,816 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { ApiError, deleteFile, UploadedFile, uploadFile, validateFile } from '../src/api/upload';
+
+// Session interface for linking files
+interface Session {
+  id: string;
+  title: string;
+  subject?: string | null;
+  created_at: string;
+}
+
+interface FileUploaderProps {
+  visible: boolean;
+  onClose: () => void;
+  sessions: Session[];
+  onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
+}
+
+// Status enum for upload states
+type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
+
+export const FileUploader: React.FC<FileUploaderProps> = ({
+  visible,
+  onClose,
+  sessions,
+  onUploadComplete,
+}) => {
+  const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string; type: string; size: number } | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
+  const [status, setStatus] = useState<UploadStatus>('idle');
+  const [progress, setProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<{ file: UploadedFile; sessionId: string }[]>([]);
+
+  // Reset state when modal opens
+  React.useEffect(() => {
+    if (visible) {
+      resetState();
+    }
+  }, [visible]);
+
+  const resetState = () => {
+    setSelectedFile(null);
+    setSelectedSessionId('');
+    setStatus('idle');
+    setProgress(0);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  };
+
+  // Request permissions and pick file
+  const handleSelectFile = async () => {
+    try {
+      setStatus('selecting');
+      setErrorMessage(null);
+
+      // Request media library permissions
+      const { status: permissionStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionStatus !== 'granted') {
+        setErrorMessage('Permission to access media library is required');
+        setStatus('error');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsEditing: false,
+        quality: 1,
+        selectionLimit: 1,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        setStatus('idle');
+        return;
+      }
+
+      const asset = result.assets[0];
+      
+      // Get file info
+      const fileInfo = await getFileInfo(asset);
+      
+      // Validate file
+      const validationError = validateFile({ type: fileInfo.type, size: fileInfo.size });
+      if (validationError) {
+        setErrorMessage(validationError);
+        setStatus('error');
+        return;
+      }
+
+      setSelectedFile(fileInfo);
+      setStatus('idle');
+    } catch {
+      setErrorMessage('Failed to select file. Please try again.');
+      setStatus('error');
+    }
+  };
+
+  // Get file info from asset
+  const getFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
+    const uri = asset.uri;
+    const name = uri.split('/').pop() || 'file';
+    
+    // Determine file type from extension
+    let type = 'application/octet-stream';
+    const extension = name.split('.').pop()?.toLowerCase();
+    
+    const typeMap: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      md: 'text/markdown',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    
+    if (extension && typeMap[extension]) {
+      type = typeMap[extension];
+    }
+
+    return {
+      uri,
+      name,
+      type,
+      size: asset.fileSize || 0,
+    };
+  };
+
+  // Handle file upload
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setErrorMessage('Please select a file first');
+      return;
+    }
+
+    if (!selectedSessionId) {
+      setErrorMessage('Please select a session to link the file to');
+      return;
+    }
+
+    try {
+      setStatus('uploading');
+      setProgress(0);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+
+      // Simulate progress (since fetch doesn't provide upload progress)
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const result = await uploadFile(
+        {
+          uri: selectedFile.uri,
+          name: selectedFile.name,
+          type: selectedFile.type,
+        },
+        `session-${selectedSessionId}`
+      );
+
+      clearInterval(progressInterval);
+      setProgress(100);
+      setStatus('success');
+      setSuccessMessage('File uploaded successfully!');
+
+      // Add to uploaded files list
+      setUploadedFiles((prev) => [...prev, { file: result, sessionId: selectedSessionId }]);
+
+      // Callback if provided
+      if (onUploadComplete) {
+        onUploadComplete(result, selectedSessionId);
+      }
+
+      // Reset for next upload after delay
+      setTimeout(() => {
+        setSelectedFile(null);
+        setStatus('idle');
+        setProgress(0);
+        setSuccessMessage(null);
+      }, 2000);
+
+    } catch (error) {
+      setProgress(0);
+      setStatus('error');
+      
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Failed to upload file. Please try again.');
+      }
+    }
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = async (fileUrl: string, index: number) => {
+    Alert.alert(
+      'Delete File',
+      'Are you sure you want to delete this file?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFile(fileUrl);
+              setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+              Alert.alert('Success', 'File deleted successfully');
+            } catch {
+              Alert.alert('Error', 'Failed to delete file');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Get selected session title
+  const getSelectedSessionTitle = () => {
+    if (!selectedSessionId) return 'Select a session';
+    const session = sessions.find((s) => s.id === selectedSessionId);
+    return session?.title || 'Unknown session';
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Get file icon based on type
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return 'image-outline';
+    if (type === 'application/pdf') return 'document-text-outline';
+    if (type.includes('word')) return 'document-outline';
+    if (type.startsWith('text/')) return 'document-text-outline';
+    return 'attach-outline';
+  };
+
+  // Get status color (reserved for future use)
+  const _getStatusColor = () => {
+    switch (status) {
+      case 'success': return '#10b981';
+      case 'error': return '#ef4444';
+      case 'uploading': return '#7f13ec';
+      default: return '#6b7280';
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Upload File</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          {/* Drop Zone / Selection Area */}
+          <View style={styles.dropZone}>
+            {selectedFile ? (
+              <View style={styles.selectedFileContainer}>
+                <View style={styles.fileIconContainer}>
+                  <Ionicons 
+                    name={getFileIcon(selectedFile.type) as keyof typeof Ionicons.glyphMap} 
+                    size={40} 
+                    color="#7f13ec" 
+                  />
+                </View>
+                <View style={styles.fileInfo}>
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {selectedFile.name}
+                  </Text>
+                  <Text style={styles.fileSize}>
+                    {formatFileSize(selectedFile.size)}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => setSelectedFile(null)}
+                  style={styles.removeFileButton}
+                >
+                  <Ionicons name="close-circle" size={24} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.selectButton}
+                onPress={handleSelectFile}
+                disabled={status === 'selecting' || status === 'uploading'}
+              >
+                {status === 'selecting' ? (
+                  <ActivityIndicator size="large" color="#7f13ec" />
+                ) : (
+                  <>
+                    <Ionicons name="cloud-upload-outline" size={48} color="#7f13ec" />
+                    <Text style={styles.selectTitle}>Tap to select a file</Text>
+                    <Text style={styles.selectSubtitle}>
+                      or drag and drop
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Session Selector */}
+          <View style={styles.sessionSection}>
+            <Text style={styles.sectionLabel}>Link to Session</Text>
+            <TouchableOpacity 
+              style={styles.sessionSelector}
+              onPress={() => setShowSessionPicker(true)}
+              disabled={status === 'uploading'}
+            >
+              <Ionicons name="folder-outline" size={20} color="#94a3b8" />
+              <Text style={styles.sessionSelectorText}>
+                {getSelectedSessionTitle()}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Progress Indicator */}
+          {status === 'uploading' && (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+              <Text style={styles.progressText}>
+                Uploading... {progress}%
+              </Text>
+            </View>
+          )}
+
+          {/* Status Messages */}
+          {errorMessage && (
+            <View style={styles.messageContainer}>
+              <Ionicons name="alert-circle" size={20} color="#ef4444" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
+          {successMessage && (
+            <View style={styles.messageContainer}>
+              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <Text style={styles.successText}>{successMessage}</Text>
+            </View>
+          )}
+
+          {/* File Type Info */}
+          <View style={styles.infoContainer}>
+            <Ionicons name="information-circle-outline" size={16} color="#94a3b8" />
+            <Text style={styles.infoText}>
+              Allowed: Images, PDF, Text, Word documents (max 10MB)
+            </Text>
+          </View>
+
+          {/* Upload Button */}
+          <TouchableOpacity
+            style={[
+              styles.uploadButton,
+              (!selectedFile || !selectedSessionId || status === 'uploading') && 
+              styles.uploadButtonDisabled
+            ]}
+            onPress={handleUpload}
+            disabled={!selectedFile || !selectedSessionId || status === 'uploading'}
+          >
+            <LinearGradient
+              colors={status === 'uploading' ? ['#9ca3af', '#9ca3af'] : ['#7f13ec', '#6366f1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.uploadButtonGradient}
+            >
+              {status === 'uploading' ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="cloud-done-outline" size={20} color="white" />
+                  <Text style={styles.uploadButtonText}>Upload File</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Uploaded Files List */}
+          {uploadedFiles.length > 0 && (
+            <View style={styles.uploadedFilesSection}>
+              <Text style={styles.sectionLabel}>Uploaded Files</Text>
+              {uploadedFiles.map((item, index) => {
+                const session = sessions.find(s => s.id === item.sessionId);
+                return (
+                  <View key={index} style={styles.uploadedFileItem}>
+                    <Ionicons 
+                      name={getFileIcon(item.file.file_type) as keyof typeof Ionicons.glyphMap} 
+                      size={24} 
+                      color="#7f13ec" 
+                    />
+                    <View style={styles.uploadedFileInfo}>
+                      <Text style={styles.uploadedFileName} numberOfLines={1}>
+                        {item.file.file_name}
+                      </Text>
+                      <Text style={styles.uploadedFileSession}>
+                        Session: {session?.title || 'Unknown'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteFile(item.file.file_url, index)}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Session Picker Modal */}
+        <Modal
+          visible={showSessionPicker}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowSessionPicker(false)}
+        >
+          <Pressable 
+            style={styles.pickerOverlay}
+            onPress={() => setShowSessionPicker(false)}
+          >
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>Select a Session</Text>
+                <TouchableOpacity onPress={() => setShowSessionPicker(false)}>
+                  <Ionicons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              
+              {sessions.length === 0 ? (
+                <View style={styles.emptySessions}>
+                  <Ionicons name="folder-open-outline" size={48} color="#cbd5e1" />
+                  <Text style={styles.emptyText}>No sessions available</Text>
+                  <Text style={styles.emptySubtext}>Create a session first to upload files</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={sessions}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.sessionItem,
+                        selectedSessionId === item.id && styles.sessionItemSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedSessionId(item.id);
+                        setShowSessionPicker(false);
+                      }}
+                    >
+                      <View style={styles.sessionItemIcon}>
+                        <Ionicons 
+                          name="folder" 
+                          size={20} 
+                          color={selectedSessionId === item.id ? '#ffffff' : '#7f13ec'} 
+                        />
+                      </View>
+                      <View style={styles.sessionItemContent}>
+                        <Text style={[
+                          styles.sessionItemTitle,
+                          selectedSessionId === item.id && styles.sessionItemTitleSelected
+                        ]}>
+                          {item.title}
+                        </Text>
+                        {item.subject && (
+                          <Text style={styles.sessionItemSubject}>
+                            {item.subject}
+                          </Text>
+                        )}
+                      </View>
+                      {selectedSessionId === item.id && (
+                        <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  ItemSeparatorComponent={() => <View style={styles.separator} />}
+                />
+              )}
+            </View>
+          </Pressable>
+        </Modal>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f7f6f8',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  dropZone: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#e5e7eb',
+    padding: 32,
+    marginBottom: 20,
+  },
+  selectButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginTop: 16,
+  },
+  selectSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  selectedFileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fileIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#f3e8ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  fileSize: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  removeFileButton: {
+    padding: 8,
+  },
+  sessionSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  sessionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+  },
+  sessionSelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#0f172a',
+    marginLeft: 12,
+  },
+  progressContainer: {
+    marginBottom: 20,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#7f13ec',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    marginLeft: 8,
+    flex: 1,
+  },
+  successText: {
+    fontSize: 14,
+    color: '#10b981',
+    marginLeft: 8,
+    flex: 1,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginLeft: 4,
+  },
+  uploadButton: {
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  uploadButtonDisabled: {
+    opacity: 0.5,
+  },
+  uploadButtonGradient: {
+    flexDirection: 'row',
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  uploadedFilesSection: {
+    marginTop: 8,
+  },
+  uploadedFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  uploadedFileInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  uploadedFileName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  uploadedFileSession: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  // Session Picker Modal Styles
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  emptySessions: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  sessionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  sessionItemSelected: {
+    backgroundColor: '#7f13ec',
+  },
+  sessionItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3e8ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sessionItemContent: {
+    flex: 1,
+  },
+  sessionItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  sessionItemTitleSelected: {
+    color: '#ffffff',
+  },
+  sessionItemSubject: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+});
+
+export default FileUploader;

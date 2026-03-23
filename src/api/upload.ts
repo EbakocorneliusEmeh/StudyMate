@@ -1,7 +1,5 @@
-import { Platform } from 'react-native';
 import { getToken } from '../utils/storage';
 
-// Use localhost for web, private IP for mobile
 const getBackendUrl = (): string => {
   if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
     return 'http://localhost:3000';
@@ -11,7 +9,6 @@ const getBackendUrl = (): string => {
 
 const BACKEND_URL = getBackendUrl();
 
-// Custom error class for API errors
 export class ApiError extends Error {
   constructor(message: string, public statusCode?: number) {
     super(message);
@@ -19,7 +16,6 @@ export class ApiError extends Error {
   }
 }
 
-// Types for file upload
 export interface UploadedFile {
   file_name: string;
   file_url: string;
@@ -27,7 +23,6 @@ export interface UploadedFile {
   file_size: number;
 }
 
-// Check if error is a network connectivity issue
 const isNetworkError = (error: unknown): boolean => {
   if (error instanceof TypeError) {
     return error.message.includes('Network request failed') ||
@@ -41,10 +36,7 @@ const isNetworkError = (error: unknown): boolean => {
   return false;
 };
 
-/**
- * Upload a file to the backend
- * POST /api/upload
- */
+
 export const uploadFile = async (
   file: {
     uri: string;
@@ -66,7 +58,7 @@ export const uploadFile = async (
       uri: file.uri,
       name: file.name,
       type: file.type,
-    } as any);
+    } as unknown as Blob);
     
     if (folder) {
       formData.append('folder', folder);
@@ -105,10 +97,7 @@ export const uploadFile = async (
   }
 };
 
-/**
- * Delete a file
- * DELETE /api/upload
- */
+
 export const deleteFile = async (fileUrl: string): Promise<{ message: string }> => {
   try {
     const token = await getToken();
@@ -150,10 +139,7 @@ export const deleteFile = async (fileUrl: string): Promise<{ message: string }> 
   }
 };
 
-/**
- * Get a signed URL for a file
- * POST /api/upload/signed-url
- */
+
 export const getSignedUrl = async (
   fileUrl: string,
   expiresIn?: number
@@ -213,9 +199,6 @@ export const ALLOWED_FILE_TYPES = [
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-/**
- * Validate a file before upload
- */
 export const validateFile = (file: { type: string; size: number }): string | null => {
   if (!ALLOWED_FILE_TYPES.includes(file.type)) {
     return 'File type not allowed';

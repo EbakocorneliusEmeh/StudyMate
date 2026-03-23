@@ -9,10 +9,12 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { CreateSessionForm } from '../components/CreateSessionForm';
 import { SessionCard } from '../components/SessionCard';
+import { FileUploader } from '../components/FileUploader';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
 interface Session {
@@ -27,6 +29,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(true);
+  const [showUploader, setShowUploader] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -83,10 +86,28 @@ export default function SessionsPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Study Sessions</Text>
-          <Text style={styles.headerSubtitle}>
-            Create and manage your study sessions
-          </Text>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Study Sessions</Text>
+              <Text style={styles.headerSubtitle}>
+                Create and manage your study sessions
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.uploadButton}
+              onPress={() => setShowUploader(true)}
+            >
+              <LinearGradient
+                colors={['#7f13ec', '#6366f1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.uploadButtonGradient}
+              >
+                <Ionicons name="cloud-upload-outline" size={20} color="white" />
+                <Text style={styles.uploadButtonText}>Upload</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Create Session Form */}
@@ -131,6 +152,16 @@ export default function SessionsPage() {
           <Text style={styles.activeTabText}>Sessions</Text>
         </LinearGradient>
       </View>
+
+      {/* File Uploader Modal */}
+      <FileUploader
+        visible={showUploader}
+        onClose={() => setShowUploader(false)}
+        sessions={sessions}
+        onUploadComplete={(file, sessionId) => {
+          console.log('File uploaded:', file.file_name, 'to session:', sessionId);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -143,6 +174,27 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 100,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  uploadButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginLeft: 12,
+  },
+  uploadButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   header: {
     marginBottom: 24,

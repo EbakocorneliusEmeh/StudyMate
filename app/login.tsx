@@ -11,6 +11,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,6 +50,8 @@ export default function LoginScreen() {
       const data = await login({ email, password });
       await storeToken(data.access_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+      Alert.alert('Success', `Welcome, ${data.user.name}!`);
       router.replace('/sessions');
     } catch (err: any) {
       // Extract specific message from your NestJS AuthService

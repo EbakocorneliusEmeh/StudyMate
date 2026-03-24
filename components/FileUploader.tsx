@@ -3,20 +3,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { ApiError, deleteFile, UploadedFile, uploadFile, validateFile } from '../src/api/upload';
 
-// Session interface for linking files
 interface Session {
   id: string;
   title: string;
@@ -31,7 +30,6 @@ interface FileUploaderProps {
   onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
 }
 
-// Status enum for upload states
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
@@ -49,7 +47,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<{ file: UploadedFile; sessionId: string }[]>([]);
 
-  // Reset state when modal opens
   React.useEffect(() => {
     if (visible) {
       resetState();
@@ -65,13 +62,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setSuccessMessage(null);
   };
 
-  // Request permissions and pick file
   const handleSelectFile = async () => {
     try {
       setStatus('selecting');
       setErrorMessage(null);
 
-      // Request media library permissions
       const { status: permissionStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (permissionStatus !== 'granted') {
@@ -80,7 +75,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: false,
@@ -95,10 +89,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
       const asset = result.assets[0];
       
-      // Get file info
       const fileInfo = await getFileInfo(asset);
       
-      // Validate file
       const validationError = validateFile({ type: fileInfo.type, size: fileInfo.size });
       if (validationError) {
         setErrorMessage(validationError);
@@ -114,12 +106,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
-  // Get file info from asset
   const getFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
     const uri = asset.uri;
     const name = uri.split('/').pop() || 'file';
     
-    // Determine file type from extension
     let type = 'application/octet-stream';
     const extension = name.split('.').pop()?.toLowerCase();
     
@@ -148,7 +138,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     };
   };
 
-  // Handle file upload
   const handleUpload = async () => {
     if (!selectedFile) {
       setErrorMessage('Please select a file first');
@@ -166,7 +155,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      // Simulate progress (since fetch doesn't provide upload progress)
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
@@ -191,15 +179,12 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setStatus('success');
       setSuccessMessage('File uploaded successfully!');
 
-      // Add to uploaded files list
       setUploadedFiles((prev) => [...prev, { file: result, sessionId: selectedSessionId }]);
 
-      // Callback if provided
       if (onUploadComplete) {
         onUploadComplete(result, selectedSessionId);
       }
 
-      // Reset for next upload after delay
       setTimeout(() => {
         setSelectedFile(null);
         setStatus('idle');
@@ -221,7 +206,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
-  // Handle file deletion
   const handleDeleteFile = async (fileUrl: string, index: number) => {
     Alert.alert(
       'Delete File',
@@ -245,21 +229,18 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     );
   };
 
-  // Get selected session title
   const getSelectedSessionTitle = () => {
     if (!selectedSessionId) return 'Select a session';
     const session = sessions.find((s) => s.id === selectedSessionId);
     return session?.title || 'Unknown session';
   };
 
-  // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Get file icon based on type
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return 'image-outline';
     if (type === 'application/pdf') return 'document-text-outline';
@@ -268,7 +249,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     return 'attach-outline';
   };
 
-  // Get status color (reserved for future use)
   const _getStatusColor = () => {
     switch (status) {
       case 'success': return '#10b981';

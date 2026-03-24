@@ -1,16 +1,22 @@
 import { getToken } from '../utils/storage';
 
 const getBackendUrl = (): string => {
-  if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+  if (
+    typeof window !== 'undefined' &&
+    window.location?.hostname === 'localhost'
+  ) {
     return 'http://localhost:3000';
   }
-  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.172:3000';
+  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.178:3000';
 };
 
 const BACKEND_URL = getBackendUrl();
 
 export class ApiError extends Error {
-  constructor(message: string, public statusCode?: number) {
+  constructor(
+    message: string,
+    public statusCode?: number,
+  ) {
     super(message);
     this.name = 'ApiError';
   }
@@ -25,17 +31,20 @@ export interface UploadedFile {
 
 const isNetworkError = (error: unknown): boolean => {
   if (error instanceof TypeError) {
-    return error.message.includes('Network request failed') ||
-           error.message.includes('Network error');
+    return (
+      error.message.includes('Network request failed') ||
+      error.message.includes('Network error')
+    );
   }
   if (error instanceof Error) {
-    return error.message.includes('ECONNREFUSED') ||
-           error.message.includes('ENOTFOUND') ||
-           error.message.includes('ETIMEDOUT');
+    return (
+      error.message.includes('ECONNREFUSED') ||
+      error.message.includes('ENOTFOUND') ||
+      error.message.includes('ETIMEDOUT')
+    );
   }
   return false;
 };
-
 
 export const uploadFile = async (
   file: {
@@ -43,11 +52,11 @@ export const uploadFile = async (
     name: string;
     type: string;
   },
-  folder?: string
+  folder?: string,
 ): Promise<UploadedFile> => {
   try {
     const token = await getToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -59,7 +68,7 @@ export const uploadFile = async (
       name: file.name,
       type: file.type,
     } as unknown as Blob);
-    
+
     if (folder) {
       formData.append('folder', folder);
     }
@@ -67,7 +76,7 @@ export const uploadFile = async (
     const res = await fetch(`${BACKEND_URL}/api/upload`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
       },
       body: formData,
@@ -88,7 +97,9 @@ export const uploadFile = async (
     return data;
   } catch (error) {
     if (isNetworkError(error)) {
-      throw new ApiError('Unable to connect to server. Please check your internet connection.');
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
     }
     if (error instanceof ApiError) {
       throw error;
@@ -97,11 +108,12 @@ export const uploadFile = async (
   }
 };
 
-
-export const deleteFile = async (fileUrl: string): Promise<{ message: string }> => {
+export const deleteFile = async (
+  fileUrl: string,
+): Promise<{ message: string }> => {
   try {
     const token = await getToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -110,7 +122,7 @@ export const deleteFile = async (fileUrl: string): Promise<{ message: string }> 
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ file_url: fileUrl }),
     });
@@ -130,7 +142,9 @@ export const deleteFile = async (fileUrl: string): Promise<{ message: string }> 
     return data;
   } catch (error) {
     if (isNetworkError(error)) {
-      throw new ApiError('Unable to connect to server. Please check your internet connection.');
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
     }
     if (error instanceof ApiError) {
       throw error;
@@ -139,14 +153,13 @@ export const deleteFile = async (fileUrl: string): Promise<{ message: string }> 
   }
 };
 
-
 export const getSignedUrl = async (
   fileUrl: string,
-  expiresIn?: number
+  expiresIn?: number,
 ): Promise<{ signed_url: string }> => {
   try {
     const token = await getToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -155,7 +168,7 @@ export const getSignedUrl = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ file_url: fileUrl, expires_in: expiresIn }),
     });
@@ -168,14 +181,17 @@ export const getSignedUrl = async (
     }
 
     if (!res.ok) {
-      const errorMsg = data?.message || data?.error || 'Failed to get signed URL';
+      const errorMsg =
+        data?.message || data?.error || 'Failed to get signed URL';
       throw new ApiError(errorMsg, res.status);
     }
 
     return data;
   } catch (error) {
     if (isNetworkError(error)) {
-      throw new ApiError('Unable to connect to server. Please check your internet connection.');
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
     }
     if (error instanceof ApiError) {
       throw error;
@@ -199,14 +215,17 @@ export const ALLOWED_FILE_TYPES = [
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export const validateFile = (file: { type: string; size: number }): string | null => {
+export const validateFile = (file: {
+  type: string;
+  size: number;
+}): string | null => {
   if (!ALLOWED_FILE_TYPES.includes(file.type)) {
     return 'File type not allowed';
   }
-  
+
   if (file.size > MAX_FILE_SIZE) {
     return 'File too large. Maximum size is 10MB';
   }
-  
+
   return null;
 };

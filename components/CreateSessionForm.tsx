@@ -1,15 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { createSession } from '../src/api/sessions';
 
 interface CreateSessionFormProps {
@@ -19,6 +20,7 @@ interface CreateSessionFormProps {
 export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
   onSuccess,
 }) => {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,11 +36,14 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
     setIsLoading(true);
 
     try {
-      await createSession(title.trim(), subject.trim() || undefined);
+      const newSession = await createSession(title.trim(), subject.trim() || undefined);
       setTitle('');
       setSubject('');
       onSuccess();
       Alert.alert('Success', 'Study session created successfully!');
+      
+      // Navigate to the session detail page
+      router.push(`/session/${newSession.id}`);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to create session';

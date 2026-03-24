@@ -225,11 +225,14 @@ export default function SessionDetailScreen() {
         setFiles((prev) => [...prev, newFile]);
       }
 
+      // Redirect to chatbot (explore) page after successful upload
       setTimeout(() => {
         setSelectedFile(null);
         setUploadStatus('idle');
         setProgress(0);
-      }, 2000);
+        // Navigate to the chatbot/explore page after successful upload
+        router.push('/(tabs)/explore');
+      }, 1500);
 
     } catch (error) {
       setProgress(0);

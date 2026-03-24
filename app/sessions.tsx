@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
@@ -13,8 +14,8 @@ import {
   View,
 } from 'react-native';
 import { CreateSessionForm } from '../components/CreateSessionForm';
-import { SessionCard } from '../components/SessionCard';
 import { FileUploader } from '../components/FileUploader';
+import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
 interface Session {
@@ -26,6 +27,7 @@ interface Session {
 }
 
 export default function SessionsPage() {
+  const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(true);
@@ -63,6 +65,10 @@ export default function SessionsPage() {
         err instanceof Error ? err.message : 'Failed to delete session';
       Alert.alert('Error', errorMessage);
     }
+  };
+
+  const handleSessionPress = (id: string) => {
+    router.push(`/session/${id}`);
   };
 
   const handleSessionCreated = () => {
@@ -134,6 +140,7 @@ export default function SessionsPage() {
                 key={session.id}
                 session={session}
                 onDelete={handleDelete}
+                onPress={handleSessionPress}
               />
             ))
           )}

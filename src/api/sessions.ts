@@ -11,6 +11,16 @@ export interface StudySession {
   created_at: string;
 }
 
+export interface SessionFile {
+  id: string;
+  session_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+}
+
 export interface StudySessionListResponse {
   sessions: StudySession[];
   total: number;
@@ -206,5 +216,149 @@ export const deleteSession = async (
       throw error;
     }
     throw new ApiError('Failed to delete session');
+  }
+};
+
+/**
+ * Get all files for a specific session
+ */
+export const getSessionFiles = async (
+  sessionId: string,
+): Promise<SessionFile[]> => {
+  try {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/${sessionId}/files`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ApiError('Invalid response from server');
+    }
+
+    if (!res.ok) {
+      const errorMsg =
+        data?.message || data?.error || 'Failed to fetch session files';
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    return data.files || [];
+  } catch (error) {
+    if (isNetworkError(error)) {
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to fetch session files');
+  }
+};
+
+/**
+ * Link a file to a session (after upload)
+ */
+export const linkFileToSession = async (
+  sessionId: string,
+  fileUrl: string,
+  fileName: string,
+  fileType: string,
+  fileSize: number,
+): Promise<SessionFile> => {
+  try {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/${sessionId}/files`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType,
+        file_size: fileSize,
+      }),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ApiError('Invalid response from server');
+    }
+
+    if (!res.ok) {
+      const errorMsg =
+        data?.message || data?.error || 'Failed to link file to session';
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    return data;
+  } catch (error) {
+    if (isNetworkError(error)) {
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to link file to session');
+  }
+};
+
+/**
+ * Unlink a file from a session
+ */
+export const unlinkFileFromSession = async (
+  sessionId: string,
+  fileId: string,
+): Promise<{ message: string }> => {
+  try {
+    const token = await getAuthToken();
+
+    const res = await fetch(
+      `${BACKEND_URL}/api/session/${sessionId}/files/${fileId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ApiError('Invalid response from server');
+    }
+
+    if (!res.ok) {
+      const errorMsg =
+        data?.message || data?.error || 'Failed to remove file from session';
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    return data;
+  } catch (error) {
+    if (isNetworkError(error)) {
+      throw new ApiError(
+        'Unable to connect to server. Please check your internet connection.',
+      );
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to remove file from session');
   }
 };

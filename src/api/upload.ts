@@ -1,16 +1,31 @@
-import { getToken } from '../utils/storage';
-
 const getBackendUrl = (): string => {
-  if (
-    typeof window !== 'undefined' &&
-    window.location?.hostname === 'localhost'
-  ) {
-    return 'http://localhost:3000';
+  // For development, check if we have an explicit env var
+  // Otherwise use the default IP address for mobile devices
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
   }
-  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.178:3000';
+  
+  // Default to local IP for mobile development
+  // This can be changed via environment variable in production
+  return 'http://192.168.1.169:3000';
 };
 
 const BACKEND_URL = getBackendUrl();
+
+// Get auth token - tries both new (authToken) and legacy (access_token) keys
+const getAuthToken = async (): Promise<string> => {
+  const AsyncStorage =
+    await import('@react-native-async-storage/async-storage');
+  // Try authToken first (new), then access_token (legacy)
+  let token = await AsyncStorage.default.getItem('authToken');
+  if (!token) {
+    token = await AsyncStorage.default.getItem('access_token');
+  }
+  if (!token) {
+    throw new ApiError('Not authenticated', 401);
+  }
+  return token;
+};
 
 export class ApiError extends Error {
   constructor(
@@ -55,8 +70,8 @@ export const uploadFile = async (
   folder?: string,
 ): Promise<UploadedFile> => {
   try {
-    const token = await getToken();
-
+    const token = await getAuthToken();
+    
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -112,8 +127,8 @@ export const deleteFile = async (
   fileUrl: string,
 ): Promise<{ message: string }> => {
   try {
-    const token = await getToken();
-
+    const token = await getAuthToken();
+    
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -158,8 +173,8 @@ export const getSignedUrl = async (
   expiresIn?: number,
 ): Promise<{ signed_url: string }> => {
   try {
-    const token = await getToken();
-
+    const token = await getAuthToken();
+    
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -206,6 +221,8 @@ export const ALLOWED_FILE_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
+  'image/heic',
+  'image/heif',
   'application/pdf',
   'text/plain',
   'text/markdown',

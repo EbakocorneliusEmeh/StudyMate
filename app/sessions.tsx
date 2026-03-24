@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
@@ -14,7 +15,6 @@ import {
 } from 'react-native';
 import { CreateSessionForm } from '../components/CreateSessionForm';
 import { SessionCard } from '../components/SessionCard';
-import { FileUploader } from '../components/FileUploader';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
 interface Session {
@@ -26,10 +26,10 @@ interface Session {
 }
 
 export default function SessionsPage() {
+  const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(true);
-  const [showUploader, setShowUploader] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -63,6 +63,10 @@ export default function SessionsPage() {
         err instanceof Error ? err.message : 'Failed to delete session';
       Alert.alert('Error', errorMessage);
     }
+  };
+
+  const handleSessionPress = (id: string) => {
+    router.push(`/session/${id}`);
   };
 
   const handleSessionCreated = () => {
@@ -134,6 +138,7 @@ export default function SessionsPage() {
                 key={session.id}
                 session={session}
                 onDelete={handleDelete}
+                onPress={handleSessionPress}
               />
             ))
           )}
@@ -205,23 +210,6 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  uploadButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginLeft: 12,
-  },
-  uploadButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  uploadButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   header: {
     marginBottom: 24,

@@ -6,11 +6,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { ApiError, getSession, getSessionFiles, linkFileToSession, StudySession, unlinkFileFromSession } from '../../src/api/sessions';
 import { deleteFile, ApiError as UploadApiError, uploadFile, validateFile } from '../../src/api/upload';
@@ -27,6 +29,8 @@ interface SessionFile {
 
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
 
+type UploadType = 'notes' | 'pdf' | 'picture' | null;
+
 export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
   const id = params.id as string | undefined;
@@ -40,6 +44,8 @@ export default function SessionDetailScreen() {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
+  const [uploadType, setUploadType] = useState<UploadType>(null);
 
   const fetchSession = useCallback(async () => {
     if (!id) {
@@ -55,13 +61,11 @@ export default function SessionDetailScreen() {
       console.log('Session data received:', data);
       setSession(data);
       
-      // Fetch session files
       try {
         const sessionFiles = await getSessionFiles(id);
         setFiles(sessionFiles);
       } catch (fileError) {
         console.log('Error fetching session files:', fileError);
-        // Continue even if files couldn't be loaded
       }
     } catch (err) {
       console.log('Error fetching session:', err);
@@ -89,7 +93,7 @@ export default function SessionDetailScreen() {
     });
   };
 
-  const handleSelectFile = async () => {
+  const handleSelectFile = async (type?: UploadType) => {
     try {
       setUploadStatus('selecting');
       setErrorMessage(null);
@@ -102,8 +106,17 @@ export default function SessionDetailScreen() {
         return;
       }
 
+      let mediaTypes = ImagePicker.MediaTypeOptions.All;
+      if (type === 'picture') {
+        mediaTypes = ImagePicker.MediaTypeOptions.Images;
+      } else if (type === 'pdf') {
+        mediaTypes = ImagePicker.MediaTypeOptions.Videos; 
+      } else if (type === 'notes') {
+        mediaTypes = ImagePicker.MediaTypeOptions.All;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: mediaTypes,
         allowsEditing: false,
         quality: 1,
         selectionLimit: 1,
@@ -115,6 +128,16 @@ export default function SessionDetailScreen() {
       }
 
       const asset = result.assets[0];
+      
+      if (type === 'pdf') {
+        const fileExt = asset.uri.split('.').pop()?.toLowerCase();
+        if (fileExt !== 'pdf') {
+          setErrorMessage('Please select a PDF file');
+          setUploadStatus('error');
+          return;
+        }
+      }
+      
       const fileInfo = await getFileInfo(asset);
       
       const validationError = validateFile({ type: fileInfo.type, size: fileInfo.size });
@@ -136,7 +159,6 @@ export default function SessionDetailScreen() {
     const uri = asset.uri;
     const name = uri.split('/').pop() || 'file';
     
-    // Derive type from extension first (most reliable)
     const extension = name.split('.').pop()?.toLowerCase();
     let type = '';
     
@@ -159,10 +181,8 @@ export default function SessionDetailScreen() {
     if (extension && typeMap[extension]) {
       type = typeMap[extension];
     } else if (asset.type && asset.type.includes('/')) {
-      // Fall back to asset.type if it's a full MIME type
       type = asset.type;
     } else {
-      // Default to image/jpeg for images if we can't determine
       type = 'image/jpeg';
     }
 
@@ -172,6 +192,12 @@ export default function SessionDetailScreen() {
       type,
       size: asset.fileSize || 0,
     };
+  };
+
+  const handleUploadTypeSelect = (type: UploadType) => {
+    setUploadType(type);
+    setShowUploadMenu(false);
+    handleSelectFile(type);
   };
 
   const handleUpload = async () => {
@@ -208,7 +234,6 @@ export default function SessionDetailScreen() {
       setProgress(100);
       setUploadStatus('success');
 
-      // Link the file to the session via API
       try {
         const linkedFile = await linkFileToSession(
           id,
@@ -218,11 +243,9 @@ export default function SessionDetailScreen() {
           result.file_size
         );
         
-        // Use the linked file from the server response
         setFiles((prev) => [...prev, linkedFile]);
       } catch (linkError) {
         console.log('Error linking file to session:', linkError);
-        // Still add the file locally if linking fails
         const newFile: SessionFile = {
           id: Date.now().toString(),
           session_id: id,
@@ -235,12 +258,10 @@ export default function SessionDetailScreen() {
         setFiles((prev) => [...prev, newFile]);
       }
 
-      // Redirect to chatbot (explore) page after successful upload
       setTimeout(() => {
         setSelectedFile(null);
         setUploadStatus('idle');
         setProgress(0);
-        // Navigate to the chatbot/explore page after successful upload
         router.push('/(tabs)/explore');
       }, 1500);
 
@@ -269,22 +290,34 @@ export default function SessionDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Try to unlink from session first
-              if (id) {
+             
+              const isValidUuid = fileId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fileId);
+              
+              if (id && isValidUuid) {
                 try {
+                  console.log('Unlinking file:', fileId, 'from session:', id);
                   await unlinkFileFromSession(id, fileId);
+                  console.log('File unlinked successfully');
                 } catch (unlinkError) {
                   console.log('Error unlinking file from session:', unlinkError);
                   // Continue with file deletion even if unlink fails
                 }
               }
               
-              // Delete the actual file
+              // Delete the actual file from storage
+              if (fileUrl) {
+                console.log('Deleting file from storage:', fileUrl);
               await deleteFile(fileUrl);
+                console.log('File deleted from storage');
+              }
+              
               setFiles((prev) => prev.filter((_, i) => i !== index));
               Alert.alert('Success', 'File deleted successfully');
-            } catch {
-              Alert.alert('Error', 'Failed to delete file');
+            } catch (error) {
+              console.error('Delete file error:', error);
+              setFiles((prev) => prev.filter((_, i) => i !== index));
+              const errorMessage = error instanceof Error ? error.message : 'Failed to delete file';
+              Alert.alert('Warning', errorMessage + ' (File removed from list)');
             }
           },
         },
@@ -402,7 +435,7 @@ export default function SessionDetailScreen() {
                 ) : (
                   <TouchableOpacity 
                     style={styles.selectButton}
-                    onPress={handleSelectFile}
+                    onPress={() => setShowUploadMenu(true)}
                     disabled={uploadStatus === 'selecting' || uploadStatus === 'uploading'}
                   >
                     {uploadStatus === 'selecting' ? (
@@ -512,6 +545,72 @@ export default function SessionDetailScreen() {
         }
         contentContainerStyle={styles.listContent}
       />
+
+      <Modal
+        visible={showUploadMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowUploadMenu(false)}
+      >
+        <Pressable 
+          style={styles.menuOverlay}
+          onPress={() => setShowUploadMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle}>Upload File</Text>
+            <Text style={styles.menuSubtitle}>Select the type of file you want to upload</Text>
+            
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => handleUploadTypeSelect('notes')}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: '#fef3c7' }]}>
+                <Ionicons name="document-text-outline" size={24} color="#d97706" />
+              </View>
+              <View style={styles.menuOptionContent}>
+                <Text style={styles.menuOptionTitle}>Notes</Text>
+                <Text style={styles.menuOptionSubtitle}>Text, Markdown, Word documents</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => handleUploadTypeSelect('pdf')}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: '#fee2e2' }]}>
+                <Ionicons name="document-text-outline" size={24} color="#dc2626" />
+              </View>
+              <View style={styles.menuOptionContent}>
+                <Text style={styles.menuOptionTitle}>PDF</Text>
+                <Text style={styles.menuOptionSubtitle}>PDF documents</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => handleUploadTypeSelect('picture')}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="image-outline" size={24} color="#2563eb" />
+              </View>
+              <View style={styles.menuOptionContent}>
+                <Text style={styles.menuOptionTitle}>Picture</Text>
+                <Text style={styles.menuOptionSubtitle}>Images from your gallery</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuCancelButton}
+              onPress={() => setShowUploadMenu(false)}
+            >
+              <Text style={styles.menuCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -794,5 +893,84 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Upload Menu Styles
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  menuContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  menuSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  menuIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  menuOptionContent: {
+    flex: 1,
+  },
+  menuOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  menuOptionSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  menuCancelButton: {
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  menuCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+    textAlign: 'center',
   },
 });

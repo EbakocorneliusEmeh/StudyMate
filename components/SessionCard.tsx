@@ -12,12 +12,14 @@ import { StudySession } from '../src/api/sessions';
 interface SessionCardProps {
   session: StudySession;
   onDelete: (id: string) => Promise<void>;
+  onPress?: (id: string) => void;
   isDeleting?: boolean;
 }
 
 export const SessionCard: React.FC<SessionCardProps> = ({
   session,
   onDelete,
+  onPress,
   isDeleting = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -63,34 +65,40 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   const isCurrentlyDeleting = isLoading || isDeleting;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {session.title}
-        </Text>
-        {session.subject && (
-          <Text style={styles.subject} numberOfLines={1}>
-            Subject: {session.subject}
-          </Text>
-        )}
-        <Text style={styles.date}>
-          Created: {formatDate(session.created_at)}
-        </Text>
-      </View>
+    <>
       <TouchableOpacity
-        style={[
-          styles.deleteButton,
-          isCurrentlyDeleting && styles.deleteButtonDisabled,
-        ]}
-        onPress={handleDeletePress}
+        style={styles.card}
+        onPress={() => onPress?.(session.id)}
         activeOpacity={0.7}
-        disabled={isCurrentlyDeleting}
       >
-        {isCurrentlyDeleting ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        )}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>
+            {session.title}
+          </Text>
+          {session.subject && (
+            <Text style={styles.subject} numberOfLines={1}>
+              Subject: {session.subject}
+            </Text>
+          )}
+          <Text style={styles.date}>
+            Created: {formatDate(session.created_at)}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.deleteButton,
+            isCurrentlyDeleting && styles.deleteButtonDisabled,
+          ]}
+          onPress={handleDeletePress}
+          activeOpacity={0.7}
+          disabled={isCurrentlyDeleting}
+        >
+          {isCurrentlyDeleting ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          )}
+        </TouchableOpacity>
       </TouchableOpacity>
 
       <Modal
@@ -128,7 +136,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
           </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 };
 

@@ -80,6 +80,10 @@ export default function SessionsScreen() {
     }
   };
 
+  const handleSessionPress = (id: string) => {
+    router.push(`/session/${id}`);
+  };
+
   const handleCreateSuccess = () => {
     fetchSessions();
   };
@@ -118,6 +122,7 @@ export default function SessionsScreen() {
           <SessionCard
             session={item}
             onDelete={handleDeleteSession}
+            onPress={handleSessionPress}
             isDeleting={deletingSessionId === item.id}
           />
         )}

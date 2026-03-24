@@ -1,22 +1,18 @@
 const getBackendUrl = (): string => {
-  // For development, check if we have an explicit env var
-  // Otherwise use the default IP address for mobile devices
+  
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
   
-  // Default to local IP for mobile development
-  // This can be changed via environment variable in production
+  
   return 'http://192.168.1.169:3000';
 };
 
 const BACKEND_URL = getBackendUrl();
 
-// Get auth token - tries both new (authToken) and legacy (access_token) keys
 const getAuthToken = async (): Promise<string> => {
   const AsyncStorage =
     await import('@react-native-async-storage/async-storage');
-  // Try authToken first (new), then access_token (legacy)
   let token = await AsyncStorage.default.getItem('authToken');
   if (!token) {
     token = await AsyncStorage.default.getItem('access_token');
@@ -70,25 +66,20 @@ export const uploadFile = async (
       throw new ApiError('No authentication token found', 401);
     }
 
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type,
-    } as unknown as Blob);
-    
-    if (folder) {
-      formData.append('folder', folder);
-    }
-
     const res = await fetch(`${BACKEND_URL}/api/upload`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({
+        file: {
+          uri: file.uri,
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+        },
+        folder: folder || 'uploads',
+      }),
     });
 
     let data;
@@ -202,7 +193,6 @@ export const getSignedUrl = async (
   }
 };
 
-// Allowed file types
 export const ALLOWED_FILE_TYPES = [
   'image/jpeg',
   'image/png',

@@ -136,8 +136,9 @@ export default function SessionDetailScreen() {
     const uri = asset.uri;
     const name = uri.split('/').pop() || 'file';
     
-    let type = 'application/octet-stream';
+    // Derive type from extension first (most reliable)
     const extension = name.split('.').pop()?.toLowerCase();
+    let type = '';
     
     const typeMap: Record<string, string> = {
       jpg: 'image/jpeg',
@@ -145,6 +146,8 @@ export default function SessionDetailScreen() {
       png: 'image/png',
       gif: 'image/gif',
       webp: 'image/webp',
+      heic: 'image/heic',
+      heif: 'image/heif',
       pdf: 'application/pdf',
       txt: 'text/plain',
       md: 'text/markdown',
@@ -152,8 +155,15 @@ export default function SessionDetailScreen() {
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
     
+    // First try to get type from extension
     if (extension && typeMap[extension]) {
       type = typeMap[extension];
+    } else if (asset.type && asset.type.includes('/')) {
+      // Fall back to asset.type if it's a full MIME type
+      type = asset.type;
+    } else {
+      // Default to image/jpeg for images if we can't determine
+      type = 'image/jpeg';
     }
 
     return {

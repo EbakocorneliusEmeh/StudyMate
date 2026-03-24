@@ -1,17 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const getBackendUrl = (): string => {
-  // For development, check if we have an explicit env var
-  // Otherwise use the default IP address for mobile devices
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  
-  // Default to local IP for mobile development
-  return 'http://192.168.1.169:3000';
-};
-
-const BACKEND_URL = getBackendUrl();
+const BACKEND_URL =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.169:3000';
 
 export interface StudySession {
   id: string;
@@ -57,10 +47,11 @@ const isNetworkError = (error: unknown): boolean => {
 };
 
 const getAuthToken = async (): Promise<string> => {
-  // Try authToken first (new), then access_token (legacy)
-  let token = await AsyncStorage.getItem('authToken');
+  const AsyncStorage =
+    await import('@react-native-async-storage/async-storage');
+  let token = await AsyncStorage.default.getItem('authToken');
   if (!token) {
-    token = await AsyncStorage.getItem('access_token');
+    token = await AsyncStorage.default.getItem('access_token');
   }
   if (!token) {
     throw new ApiError('Not authenticated', 401);
@@ -227,9 +218,6 @@ export const deleteSession = async (
   }
 };
 
-/**
- * Get all files for a specific session
- */
 export const getSessionFiles = async (
   sessionId: string,
 ): Promise<SessionFile[]> => {
@@ -270,9 +258,6 @@ export const getSessionFiles = async (
   }
 };
 
-/**
- * Link a file to a session (after upload)
- */
 export const linkFileToSession = async (
   sessionId: string,
   fileUrl: string,
@@ -324,9 +309,6 @@ export const linkFileToSession = async (
   }
 };
 
-/**
- * Unlink a file from a session
- */
 export const unlinkFileFromSession = async (
   sessionId: string,
   fileId: string,
@@ -353,7 +335,7 @@ export const unlinkFileFromSession = async (
 
     if (!res.ok) {
       const errorMsg =
-        data?.message || data?.error || 'Failed to remove file from session';
+        data?.message || data?.error || 'Failed to unlink file from session';
       throw new ApiError(errorMsg, res.status);
     }
 
@@ -367,6 +349,7 @@ export const unlinkFileFromSession = async (
     if (error instanceof ApiError) {
       throw error;
     }
-    throw new ApiError('Failed to remove file from session');
+    throw new ApiError('Failed to unlink file from session');
   }
 };
+

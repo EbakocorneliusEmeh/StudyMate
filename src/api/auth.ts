@@ -1,7 +1,7 @@
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.169:3000';
+    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.178:3000';
 
 interface AuthResponse {
   access_token: string;
@@ -35,7 +35,11 @@ export const register = async ({
     }
 
     if (!res.ok) {
-      throw new Error(data.error || 'Registration failed');
+      const errorMsg = Array.isArray(data.message)
+        ? data.message[0]
+        : data.message || 'Registration failed';
+
+      throw new Error(errorMsg);
     }
     return data;
   } catch (error) {
@@ -68,7 +72,11 @@ export const login = async ({
     }
 
     if (!res.ok) {
-      throw new Error(data.error || 'Login failed');
+      const errorMsg = Array.isArray(data.message)
+        ? data.message[0]
+        : data.message || 'Login failed';
+
+      throw new Error(errorMsg);
     }
     return data;
   } catch (error) {

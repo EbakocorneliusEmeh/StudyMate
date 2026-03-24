@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import {
   View,
   TextInput,
   Text,
-  Alert,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
@@ -11,6 +10,8 @@ import {
   Platform,
   ScrollView,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,35 +19,58 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register } from '../src/api/auth';
 import { storeToken } from '../src/utils/storage';
-
 import logoImg from '../assets/images/logo.png';
 
 export default function RegisterScreen() {
   const router = useRouter();
+
+  // States
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [errorText, setErrorText] = useState<string | null>(null); // Added error state
+
+  // Clear error when user updates any field
+  useEffect(() => {
+    if (errorText) setErrorText(null);
+  }, [name, email, password]);
 
   const handleRegister = async () => {
+    setErrorText(null);
+
+    // 1. Basic Validation
     if (!name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorText('Please fill in all fields.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setErrorText('Password must be at least 6 characters.');
       return;
     }
+
+    setIsLoading(true);
+
     try {
       const data = await register({ name, email, password });
+
+      // 2. Storage
       await storeToken(data.access_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      Alert.alert('Success', `Welcome ${data.user.name}`);
+
+      Alert.alert('Success', `Welcome, ${data.user.name}!`);
+
       router.replace('/sessions');
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Registration failed';
-      Alert.alert('Error', errorMessage);
+    } catch (err: any) {
+      // 4. Capture exact message from your NestJS AuthService
+      const message =
+        err?.response?.data?.message || err.message || 'Registration failed';
+
+      // Handle array messages from NestJS DTO validation
+      setErrorText(Array.isArray(message) ? message[0] : message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,19 +83,20 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Header Navigation */}
           <View style={styles.navHeader}>
             <TouchableOpacity
               onPress={() => router.back()}
               style={styles.backButton}
+              disabled={isLoading}
             >
               <Ionicons name="arrow-back" size={24} color="#1e293b" />
             </TouchableOpacity>
             <Text style={styles.navTitle}>AI Study Companion</Text>
             <View style={{ width: 24 }} />
           </View>
-          {/* Hero Section */}
+
           <View style={styles.heroSection}>
             <View style={styles.logoCircle}>
               <Image
@@ -86,7 +111,6 @@ export default function RegisterScreen() {
             </Text>
           </View>
 
-          {/* Form Section */}
           <View style={styles.form}>
             <Text style={styles.label}>Full Name</Text>
             <View style={styles.inputContainer}>
@@ -103,6 +127,7 @@ export default function RegisterScreen() {
                 placeholderTextColor="#94a3b8"
                 autoCapitalize="words"
                 style={styles.input}
+                editable={!isLoading}
               />
             </View>
 
@@ -122,6 +147,7 @@ export default function RegisterScreen() {
                 placeholder="example@email.com"
                 placeholderTextColor="#94a3b8"
                 style={styles.input}
+                editable={!isLoading}
               />
             </View>
 
@@ -140,6 +166,7 @@ export default function RegisterScreen() {
                 placeholder="Create a strong password"
                 placeholderTextColor="#94a3b8"
                 style={[styles.input, { flex: 1 }]}
+                editable={!isLoading}
               />
               <TouchableOpacity
                 onPress={() => setPasswordVisible(!isPasswordVisible)}
@@ -153,33 +180,48 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* ERROR DISPLAY AREA */}
+            {errorText ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                <Text style={styles.errorLabel}>{errorText}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleRegister}
-              style={styles.buttonShadow}
+              disabled={isLoading}
+              style={[styles.buttonShadow, isLoading && { opacity: 0.8 }]}
             >
               <LinearGradient
-                colors={['#7f13ec', '#6366f1']}
+                colors={
+                  isLoading ? ['#94a3b8', '#64748b'] : ['#7f13ec', '#6366f1']
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.primaryButton}
               >
-                <Text style={styles.buttonText}>Sign Up</Text>
-                <Ionicons name="arrow-forward" size={18} color="white" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Sign Up</Text>
+                    <Ionicons name="arrow-forward" size={18} color="white" />
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          {/* Social Divider */}
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social Buttons */}
           <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.socialButton}>
+            <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
               <Image
                 source={{
                   uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
@@ -188,17 +230,19 @@ export default function RegisterScreen() {
               />
               <Text style={styles.socialText}>Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
+            <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
               <Ionicons name="logo-apple" size={20} color="#000" />
               <Text style={styles.socialText}>Apple</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               Already have an account?{' '}
-              <Text style={styles.link} onPress={() => router.push('/login')}>
+              <Text
+                style={[styles.link, isLoading && { color: '#94a3b8' }]}
+                onPress={() => !isLoading && router.push('/login')}
+              >
                 Login here
               </Text>
             </Text>
@@ -278,6 +322,20 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 12 },
   input: { flex: 1, height: 56, fontSize: 16, color: '#0f172a' },
   eyeIcon: { padding: 10 },
+
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 8,
+  },
+  errorLabel: { color: '#b91c1c', fontSize: 14, fontWeight: '600', flex: 1 },
+
   buttonShadow: {
     shadowColor: '#7f13ec',
     shadowOffset: { width: 0, height: 8 },

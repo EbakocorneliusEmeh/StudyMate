@@ -1,10 +1,8 @@
 const getBackendUrl = (): string => {
-  
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  
-  
+
   return 'http://192.168.1.169:3000';
 };
 
@@ -67,7 +65,7 @@ export const uploadFile = async (
 ): Promise<UploadedFile> => {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -131,7 +129,7 @@ export const deleteFile = async (
 ): Promise<{ message: string }> => {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }
@@ -177,7 +175,7 @@ export const getSignedUrl = async (
 ): Promise<{ signed_url: string }> => {
   try {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new ApiError('No authentication token found', 401);
     }

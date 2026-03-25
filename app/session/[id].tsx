@@ -14,8 +14,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ApiError, getSession, getSessionFiles, linkFileToSession, StudySession, unlinkFileFromSession } from '../../src/api/sessions';
-import { deleteFile, ApiError as UploadApiError, uploadFile, validateFile } from '../../src/api/upload';
+import {
+  ApiError,
+  getSession,
+  getSessionFiles,
+  linkFileToSession,
+  StudySession,
+  unlinkFileFromSession,
+} from '../../src/api/sessions';
+import {
+  deleteFile,
+  ApiError as UploadApiError,
+  uploadFile,
+  validateFile,
+} from '../../src/api/upload';
 
 interface SessionFile {
   id: string;
@@ -35,12 +47,17 @@ export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
   const id = params.id as string | undefined;
   const router = useRouter();
-  
+
   const [session, setSession] = useState<StudySession | null>(null);
   const [files, setFiles] = useState<SessionFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string; type: string; size: number } | null>(null);
+  const [_isUploading, _setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{
+    uri: string;
+    name: string;
+    type: string;
+    size: number;
+  } | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,7 +70,7 @@ export default function SessionDetailScreen() {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       setIsLoading(true);
       console.log('Fetching session:', id);
@@ -69,7 +86,8 @@ export default function SessionDetailScreen() {
       }
     } catch (err) {
       console.log('Error fetching session:', err);
-      const errorMessage = err instanceof ApiError ? err.message : 'Failed to load session';
+      const errorMessage =
+        err instanceof ApiError ? err.message : 'Failed to load session';
       Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
@@ -98,8 +116,9 @@ export default function SessionDetailScreen() {
       setUploadStatus('selecting');
       setErrorMessage(null);
 
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
       if (status !== 'granted') {
         setErrorMessage('Permission to access media library is required');
         setUploadStatus('error');
@@ -139,8 +158,11 @@ export default function SessionDetailScreen() {
       }
       
       const fileInfo = await getFileInfo(asset);
-      
-      const validationError = validateFile({ type: fileInfo.type, size: fileInfo.size });
+
+      const validationError = validateFile({
+        type: fileInfo.type,
+        size: fileInfo.size,
+      });
       if (validationError) {
         setErrorMessage(validationError);
         setUploadStatus('error');
@@ -161,7 +183,7 @@ export default function SessionDetailScreen() {
     
     const extension = name.split('.').pop()?.toLowerCase();
     let type = '';
-    
+
     const typeMap: Record<string, string> = {
       jpg: 'image/jpeg',
       jpeg: 'image/jpeg',
@@ -176,7 +198,7 @@ export default function SessionDetailScreen() {
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
-    
+
     // First try to get type from extension
     if (extension && typeMap[extension]) {
       type = typeMap[extension];
@@ -227,7 +249,7 @@ export default function SessionDetailScreen() {
           name: selectedFile.name,
           type: selectedFile.type,
         },
-        `session-${id}`
+        `session-${id}`,
       );
 
       clearInterval(progressInterval);
@@ -240,7 +262,7 @@ export default function SessionDetailScreen() {
           result.file_url,
           result.file_name,
           result.file_type,
-          result.file_size
+          result.file_size,
         );
         
         setFiles((prev) => [...prev, linkedFile]);
@@ -264,11 +286,10 @@ export default function SessionDetailScreen() {
         setProgress(0);
         router.push('/(tabs)/explore');
       }, 1500);
-
     } catch (error) {
       setProgress(0);
       setUploadStatus('error');
-      
+
       if (error instanceof UploadApiError) {
         setErrorMessage(error.message);
       } else if (error instanceof Error) {
@@ -319,10 +340,17 @@ export default function SessionDetailScreen() {
               const errorMessage = error instanceof Error ? error.message : 'Failed to delete file';
               Alert.alert('Warning', errorMessage + ' (File removed from list)');
             }
-          },
+
+            // Delete the actual file
+            await deleteFile(fileUrl);
+            setFiles((prev) => prev.filter((_, i) => i !== index));
+            Alert.alert('Success', 'File deleted successfully');
+          } catch {
+            Alert.alert('Error', 'Failed to delete file');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -355,7 +383,7 @@ export default function SessionDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Session not found</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -369,7 +397,7 @@ export default function SessionDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.headerBackButton}
           onPress={() => router.back()}
         >
@@ -403,18 +431,26 @@ export default function SessionDetailScreen() {
 
             <View style={styles.uploadSection}>
               <Text style={styles.sectionTitle}>
-                <Ionicons name="cloud-upload-outline" size={20} color="#1f2937" /> 
-                {' '}Upload Study Materials
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={20}
+                  color="#1f2937"
+                />{' '}
+                Upload Study Materials
               </Text>
-              
+
               <View style={styles.uploadCard}>
                 {selectedFile ? (
                   <View style={styles.selectedFileContainer}>
                     <View style={styles.fileIconContainer}>
-                      <Ionicons 
-                        name={getFileIcon(selectedFile.type) as keyof typeof Ionicons.glyphMap} 
-                        size={32} 
-                        color="#7f13ec" 
+                      <Ionicons
+                        name={
+                          getFileIcon(
+                            selectedFile.type,
+                          ) as keyof typeof Ionicons.glyphMap
+                        }
+                        size={32}
+                        color="#7f13ec"
                       />
                     </View>
                     <View style={styles.fileInfo}>
@@ -425,7 +461,7 @@ export default function SessionDetailScreen() {
                         {formatFileSize(selectedFile.size)}
                       </Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setSelectedFile(null)}
                       style={styles.removeFileButton}
                     >
@@ -433,7 +469,7 @@ export default function SessionDetailScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.selectButton}
                     onPress={() => setShowUploadMenu(true)}
                     disabled={uploadStatus === 'selecting' || uploadStatus === 'uploading'}
@@ -442,7 +478,11 @@ export default function SessionDetailScreen() {
                       <ActivityIndicator size="large" color="#7f13ec" />
                     ) : (
                       <>
-                        <Ionicons name="add-circle-outline" size={48} color="#7f13ec" />
+                        <Ionicons
+                          name="add-circle-outline"
+                          size={48}
+                          color="#7f13ec"
+                        />
                         <Text style={styles.selectTitle}>Select a file</Text>
                         <Text style={styles.selectSubtitle}>
                           Images, PDF, Text, Word documents
@@ -455,7 +495,9 @@ export default function SessionDetailScreen() {
                 {uploadStatus === 'uploading' && (
                   <View style={styles.progressContainer}>
                     <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                      <View
+                        style={[styles.progressFill, { width: `${progress}%` }]}
+                      />
                     </View>
                     <Text style={styles.progressText}>
                       Uploading... {progress}%
@@ -472,16 +514,22 @@ export default function SessionDetailScreen() {
 
                 {uploadStatus === 'success' && (
                   <View style={styles.messageContainer}>
-                    <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-                    <Text style={styles.successText}>File uploaded successfully!</Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color="#10b981"
+                    />
+                    <Text style={styles.successText}>
+                      File uploaded successfully!
+                    </Text>
                   </View>
                 )}
 
                 <TouchableOpacity
                   style={[
                     styles.uploadButton,
-                    (!selectedFile || uploadStatus === 'uploading') && 
-                    styles.uploadButtonDisabled
+                    (!selectedFile || uploadStatus === 'uploading') &&
+                      styles.uploadButtonDisabled,
                   ]}
                   onPress={handleUpload}
                   disabled={!selectedFile || uploadStatus === 'uploading'}
@@ -490,8 +538,14 @@ export default function SessionDetailScreen() {
                     <ActivityIndicator color="#ffffff" size="small" />
                   ) : (
                     <>
-                      <Ionicons name="cloud-done-outline" size={20} color="white" />
-                      <Text style={styles.uploadButtonText}>Upload to Session</Text>
+                      <Ionicons
+                        name="cloud-done-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.uploadButtonText}>
+                        Upload to Session
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -499,13 +553,17 @@ export default function SessionDetailScreen() {
 
               <View style={styles.filesSection}>
                 <Text style={styles.filesSectionTitle}>
-                  <Ionicons name="folder-outline" size={20} color="#1f2937" />
-                  {' '}Session Files ({files.length})
+                  <Ionicons name="folder-outline" size={20} color="#1f2937" />{' '}
+                  Session Files ({files.length})
                 </Text>
 
                 {files.length === 0 ? (
                   <View style={styles.emptyFiles}>
-                    <Ionicons name="document-attach-outline" size={40} color="#cbd5e1" />
+                    <Ionicons
+                      name="document-attach-outline"
+                      size={40}
+                      color="#cbd5e1"
+                    />
                     <Text style={styles.emptyFilesText}>
                       No files uploaded yet
                     </Text>
@@ -517,10 +575,14 @@ export default function SessionDetailScreen() {
                   <View style={styles.filesList}>
                     {files.map((file, index) => (
                       <View key={file.id} style={styles.fileItem}>
-                        <Ionicons 
-                          name={getFileIcon(file.file_type) as keyof typeof Ionicons.glyphMap} 
-                          size={24} 
-                          color="#7f13ec" 
+                        <Ionicons
+                          name={
+                            getFileIcon(
+                              file.file_type,
+                            ) as keyof typeof Ionicons.glyphMap
+                          }
+                          size={24}
+                          color="#7f13ec"
                         />
                         <View style={styles.fileItemInfo}>
                           <Text style={styles.fileItemName} numberOfLines={1}>
@@ -531,9 +593,15 @@ export default function SessionDetailScreen() {
                           </Text>
                         </View>
                         <TouchableOpacity
-                          onPress={() => handleDeleteFile(file.id, file.file_url, index)}
+                          onPress={() =>
+                            handleDeleteFile(file.id, file.file_url, index)
+                          }
                         >
-                          <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                          <Ionicons
+                            name="trash-outline"
+                            size={20}
+                            color="#ef4444"
+                          />
                         </TouchableOpacity>
                       </View>
                     ))}

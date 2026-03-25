@@ -23,6 +23,8 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
+  // Logic remains untouched, but we add a local state for the UI level selector
+  const [level, setLevel] = useState('Beginner');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,13 +38,14 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
     setIsLoading(true);
 
     try {
-      const newSession = await createSession(title.trim(), subject.trim() || undefined);
+      const newSession = await createSession(
+        title.trim(),
+        subject.trim() || undefined,
+      );
       setTitle('');
       setSubject('');
       onSuccess();
       Alert.alert('Success', 'Study session created successfully!');
-      
-      // Navigate to the session detail page
       router.push(`/session/${newSession.id}`);
     } catch (err) {
       const errorMessage =
@@ -54,55 +57,67 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Session Title</Text>
-      <View style={styles.inputContainer}>
-        <Ionicons
-          name="book-outline"
-          size={20}
-          color="#94a3b8"
-          style={styles.inputIcon}
-        />
+    <View style={styles.formWrapper}>
+      <Text style={styles.fieldLabel}>Topic to Study</Text>
+      <View style={styles.inputGroup}>
         <TextInput
-          style={[styles.input, { flex: 1 }]}
+          style={styles.roundedInput}
           value={title}
           onChangeText={setTitle}
-          placeholder="e.g., Biology Revision"
-          placeholderTextColor="#94a3b8"
-          autoCapitalize="words"
-          returnKeyType="next"
+          placeholder="e.g., Photosynthesis"
+          placeholderTextColor="rgba(100, 116, 139, 0.6)"
           editable={!isLoading}
         />
       </View>
 
-      <Text style={styles.label}>Subject (Optional)</Text>
-      <View style={styles.inputContainer}>
-        <Ionicons
-          name="school-outline"
-          size={20}
-          color="#94a3b8"
-          style={styles.inputIcon}
-        />
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          value={subject}
-          onChangeText={setSubject}
-          placeholder="e.g., Biology, Chemistry, Physics"
-          placeholderTextColor="#94a3b8"
-          autoCapitalize="words"
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit}
-          editable={!isLoading}
-        />
+      <Text style={styles.fieldLabel}>Subject</Text>
+      <View style={styles.inputGroup}>
+        <View style={styles.selectorContainer}>
+          <TextInput
+            style={styles.selectorInput}
+            value={subject}
+            onChangeText={setSubject}
+            placeholder="Biology"
+            placeholderTextColor="rgba(100, 116, 139, 0.6)"
+            editable={!isLoading}
+          />
+          <Ionicons name="chevron-down" size={20} color="#7f13ec" />
+        </View>
       </View>
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {/* Complexity Level Selector from reference image */}
+      <View style={styles.levelSection}>
+        <Text style={styles.levelHeader}>COMPLEXITY LEVEL</Text>
+        <View style={styles.levelGrid}>
+          {['Beginner', 'Exam-level', 'Advanced'].map((item) => (
+            <TouchableOpacity
+              key={item}
+              onPress={() => setLevel(item)}
+              style={[
+                styles.levelButton,
+                level === item && styles.levelButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.levelButtonText,
+                  level === item && styles.levelButtonTextActive,
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
       <TouchableOpacity
-        activeOpacity={0.8}
+        activeOpacity={0.9}
         onPress={handleSubmit}
-        style={styles.buttonShadow}
         disabled={isLoading}
+        style={styles.ctaWrapper}
       >
         <LinearGradient
           colors={['#7f13ec', '#6366f1']}
@@ -114,8 +129,8 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <>
-              <Text style={styles.buttonText}>Create Session</Text>
-              <Ionicons name="add-circle-outline" size={20} color="white" />
+              <Text style={styles.buttonText}>START SESSION</Text>
+              <Ionicons name="rocket-outline" size={22} color="white" />
             </>
           )}
         </LinearGradient>
@@ -125,69 +140,115 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+  formWrapper: {
+    gap: 20,
+    width: '100%',
   },
-  label: {
+  fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 8,
+    fontWeight: '700', // Lexend Bold per Design System
+    color: '#0f172a',
+    fontFamily: 'Lexend',
     marginLeft: 4,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 16,
+  inputGroup: {
+    width: '100%',
   },
-  inputIcon: {
-    paddingLeft: 16,
-  },
-  input: {
-    padding: 14,
+  roundedInput: {
+    height: 56,
+    backgroundColor: '#f1f5f9', // surface_container
+    borderRadius: 16,
+    paddingHorizontal: 20,
     fontSize: 16,
     color: '#0f172a',
+    fontFamily: 'Lexend',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  error: {
+  selectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  selectorInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#0f172a',
+    fontFamily: 'Lexend',
+  },
+  levelSection: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  levelHeader: {
+    fontSize: 10, // Micro scale
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  levelGrid: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    padding: 6,
+    width: '100%',
+  },
+  levelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  levelButtonActive: {
+    backgroundColor: '#ffffff', // surface_container_lowest
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  levelButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    fontFamily: 'Lexend',
+  },
+  levelButtonTextActive: {
+    color: '#7f13ec', // Primary violet
+  },
+  errorText: {
     color: '#ef4444',
     fontSize: 14,
-    marginBottom: 12,
+    textAlign: 'center',
+    fontFamily: 'Lexend',
   },
-  buttonShadow: {
+  ctaWrapper: {
+    marginTop: 20,
     shadowColor: '#7f13ec',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
   primaryButton: {
     flexDirection: 'row',
-    height: 52,
-    borderRadius: 12,
+    height: 64,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    gap: 12,
   },
   buttonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    fontFamily: 'Lexend',
   },
 });

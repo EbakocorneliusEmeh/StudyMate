@@ -1,4 +1,3 @@
-
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';

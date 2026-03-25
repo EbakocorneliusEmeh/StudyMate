@@ -285,7 +285,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Upload File</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -294,7 +293,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         <View style={styles.content}>
-          {/* Drop Zone / Selection Area */}
           <View style={styles.dropZone}>
             {selectedFile ? (
               <View style={styles.selectedFileContainer}>
@@ -347,7 +345,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             )}
           </View>
 
-          {/* Session Selector */}
           <View style={styles.sessionSection}>
             <Text style={styles.sectionLabel}>Link to Session</Text>
             <TouchableOpacity
@@ -363,7 +360,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Progress Indicator */}
           {status === 'uploading' && (
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
@@ -375,7 +371,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </View>
           )}
 
-          {/* Status Messages */}
           {errorMessage && (
             <View style={styles.messageContainer}>
               <Ionicons name="alert-circle" size={20} color="#ef4444" />
@@ -390,7 +385,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </View>
           )}
 
-          {/* File Type Info */}
           <View style={styles.infoContainer}>
             <Ionicons
               name="information-circle-outline"
@@ -402,7 +396,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </Text>
           </View>
 
-          {/* Upload Button */}
           <TouchableOpacity
             style={[
               styles.uploadButton,
@@ -775,7 +768,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
-  // Session Picker Modal Styles
   pickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

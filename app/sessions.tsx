@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { CreateSessionForm } from '../components/CreateSessionForm';
+import { FileUploader } from '../components/FileUploader';
 import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
@@ -30,6 +31,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(true);
+  const [showUploader, setShowUploader] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -224,6 +226,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
     marginTop: 4,
+  },
+  uploadButton: {
+    marginLeft: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  uploadButtonGradient: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   sessionsContainer: {
     marginTop: 8,

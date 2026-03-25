@@ -42,7 +42,6 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
       onSuccess();
       Alert.alert('Success', 'Study session created successfully!');
       
-      // Navigate to the session detail page
       router.push(`/session/${newSession.id}`);
     } catch (err) {
       const errorMessage =

@@ -5,11 +5,28 @@ const BACKEND_URL =
 
 interface AuthResponse {
   access_token: string;
-  user: {
-    name: string;
-    email: string;
-  };
+  user: User;
 }
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectTo = AuthSession.makeRedirectUri();
+
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+    },
+  });
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+};
 
 export const register = async ({
   name,
@@ -48,6 +65,15 @@ export const register = async ({
     }
     throw new Error('Registration failed');
   }
+
+  return {
+    access_token: data.session?.access_token || '',
+    user: {
+      id: user.id,
+      email: user.email || '',
+      name: (user.user_metadata as { name?: string })?.name || name,
+    },
+  };
 };
 
 export const login = async ({
@@ -57,12 +83,10 @@ export const login = async ({
   email: string;
   password: string;
 }): Promise<AuthResponse> => {
-  try {
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
     let data;
     try {

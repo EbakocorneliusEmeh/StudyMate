@@ -187,6 +187,7 @@ export default function LoginScreen() {
   );
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f7f6f8', paddingTop: 20 },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },

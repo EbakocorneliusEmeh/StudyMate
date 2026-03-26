@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import logoImg from '../assets/images/logo.png';
 import studyIllustration from '../assets/images/study-illustration.png';
 
@@ -18,27 +12,23 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Header Section */}
+        \{' '}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {/* Replace with your actual book icon/logo */}
-            <Image source={logoImg} style={styles.logo} />
+            \ <Image source={logoImg} style={styles.logo} />
           </View>
           <Text style={styles.title}>StudyMate</Text>
           <Text style={styles.subtitle}>Smarter studying powered by AI</Text>
         </View>
-
-        {/* Illustration Section */}
+        \{' '}
         <View style={styles.illustrationContainer}>
-          {/* Replace this URI with your actual illustration asset */}
+          \{' '}
           <Image
             source={studyIllustration}
             style={styles.illustration}
             resizeMode="cover"
           />
         </View>
-
-        {/* Action Section */}
         <View style={styles.footer}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -72,7 +62,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Clean white background
+    backgroundColor: '#FFFFFF',
   },
   content: {
     flex: 1,
@@ -93,18 +83,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    // Shadow for iOS
     shadowColor: '#7f13ec',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
-    // Shadow for Android
     elevation: 5,
   },
   logo: {
     width: 45,
     height: 45,
-    tintColor: '#7f13ec', // If using a template icon
+    tintColor: '#7f13ec',
   },
   title: {
     fontSize: 34,

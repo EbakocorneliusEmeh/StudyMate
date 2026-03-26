@@ -5,6 +5,7 @@ const BACKEND_URL =
 
 interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   user: User;
 }
 
@@ -68,6 +69,7 @@ export const register = async ({
 
   return {
     access_token: data.session?.access_token || '',
+    refresh_token: data.session?.refresh_token || '',
     user: {
       id: user.id,
       email: user.email || '',

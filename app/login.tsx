@@ -1,272 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import { View, TextInput, Button, Text, Alert, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons';
-// import { useRouter } from 'expo-router';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import * as WebBrowser from 'expo-web-browser';
-// import * as Linking from 'expo-linking';
-// import { login } from '../src/api/auth';
-// import { storeToken } from '../src/utils/storage';
-// import { supabase } from '../src/lib/supabase';
-
-// // Complete the auth session if needed
-// WebBrowser.maybeCompleteAuthSession();
-
-// export default function LoginScreen() {
-//   const router = useRouter();
-//   const [email, setEmail] = useState('');
-//   const [password, setPassword] = useState('');
-//   const [isLoading, setIsLoading] = useState(false);
-
-//   // Handle OAuth callback from Supabase
-//   useEffect(() => {
-//     const subscription = Linking.addEventListener('url', async (event) => {
-//       const url = event.url;
-//       // Supabase will redirect with session data in the URL
-//       if (url.includes('auth/callback') || url.includes('access_token')) {
-//         try {
-//           // Get the session from Supabase
-//           const { data: { session }, error } = await supabase.auth.getSession();
-
-//           if (session) {
-//             await storeToken(session.access_token);
-//             await AsyncStorage.setItem('user', JSON.stringify({
-//               id: session.user.id,
-//               email: session.user.email,
-//               name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-//             }));
-//             Alert.alert('Success', `Welcome ${session.user.user_metadata?.full_name || 'User'}`);
-//             router.replace('/(tabs)');
-//           }
-//         } catch (err) {
-//           console.error('OAuth callback error:', err);
-//         }
-//       }
-//     });
-
-//     return () => subscription.remove();
-//   }, []);
-
-//   const handleLogin = async () => {
-//     if (!email || !password) {
-//       Alert.alert('Error', 'Please fill in all fields');
-//       return;
-//     }
-//     try {
-//       const data = await login({ email, password });
-//       await storeToken(data.access_token);
-//       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-//       Alert.alert('Success', `Welcome ${data.user.name}`);
-//       router.replace('/(tabs)');
-//     } catch (err) {
-//       const errorMessage = err instanceof Error ? err.message : 'Login failed';
-//       Alert.alert('Error', errorMessage);
-//     }
-//   };
-
-//   const handleGoogleLogin = async () => {
-//     try {
-//       setIsLoading(true);
-
-//       // Use Supabase's native Google OAuth
-//       const { data, error } = await supabase.auth.signInWithOAuth({
-//         provider: 'google',
-//         options: {
-//           redirectTo: 'studymobile://auth/callback',
-//         },
-//       });
-
-//       if (error) {
-//         throw new Error(error.message);
-//       }
-
-//       if (data?.url) {
-//         // Open the OAuth URL in browser
-//         const result = await WebBrowser.openAuthSessionAsync(
-//           data.url,
-//           'studymobile://auth/callback'
-//         );
-
-//         if (result.type === 'cancel') {
-//           Alert.alert('Cancelled', 'Authentication was cancelled');
-//         }
-//       }
-//     } catch (err) {
-//       const errorMessage = err instanceof Error ? err.message : 'Google login failed';
-//       Alert.alert('Error', errorMessage);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   // Handle the auth callback URL
-//   const handleAuthCallback = async (url: string) => {
-//     try {
-//       // Parse the URL to extract the session data
-//       const urlObj = new URL(url);
-//       const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-
-//       const accessToken = hashParams.get('access_token');
-
-//       if (accessToken) {
-//         await storeToken(accessToken);
-
-//         // Get user info
-//         const { data: { user } } = await supabase.auth.getUser(accessToken);
-
-//         if (user) {
-//           await AsyncStorage.setItem('user', JSON.stringify({
-//             id: user.id,
-//             email: user.email,
-//             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-//           }));
-//           Alert.alert('Success', 'Welcome!');
-//           router.replace('/(tabs)');
-//         }
-//       }
-//     } catch (err) {
-//       console.error('Error handling auth callback:', err);
-//     }
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.card}>
-//         <Text style={styles.title}>Welcome Back</Text>
-//         <Text style={styles.subtitle}>Sign in to continue</Text>
-
-//         <Text style={styles.label}>Email</Text>
-//         <TextInput
-//           value={email}
-//           onChangeText={setEmail}
-//           keyboardType="email-address"
-//           autoCapitalize="none"
-//           placeholder="Enter your email"
-//           style={styles.input}
-//         />
-
-//         <Text style={styles.label}>Password</Text>
-//         <TextInput
-//           value={password}
-//           onChangeText={setPassword}
-//           secureTextEntry
-//           placeholder="Enter your password"
-//           style={styles.input}
-//         />
-
-//         <View style={styles.button}>
-//           <Button title="Login" onPress={handleLogin} />
-//         </View>
-
-//         <View style={styles.googleButton}>
-//           <TouchableOpacity
-//             style={styles.googleButtonInner}
-//             onPress={handleGoogleLogin}
-//             disabled={isLoading}
-//           >
-//             {isLoading ? (
-//               <ActivityIndicator color="#374151" />
-//             ) : (
-//               <View style={styles.googleButtonContent}>
-//                 <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
-//                 <Text style={styles.googleButtonText}>Continue with Google</Text>
-//               </View>
-//             )}
-//           </TouchableOpacity>
-//         </View>
-
-//         <Text style={styles.linkText}>
-//           Don't have an account?{' '}
-//           <Text style={styles.link} onPress={() => router.push('/register')}>
-//             Register
-//           </Text>
-//         </Text>
-//       </View>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     backgroundColor: '#f3f4f6',
-//     padding: 20,
-//   },
-//   card: {
-//     backgroundColor: '#ffffff',
-//     padding: 24,
-//     borderRadius: 12,
-//     shadowColor: '#000',
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 3,
-//   },
-//   title: {
-//     fontSize: 24,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//     color: '#1f2937',
-//     marginBottom: 4,
-//   },
-//   subtitle: {
-//     fontSize: 14,
-//     textAlign: 'center',
-//     color: '#6b7280',
-//     marginBottom: 20,
-//   },
-//   label: {
-//     fontSize: 14,
-//     fontWeight: '600',
-//     color: '#374151',
-//     marginBottom: 4,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: '#d1d5db',
-//     borderRadius: 8,
-//     padding: 12,
-//     marginBottom: 16,
-//     fontSize: 16,
-//   },
-//   button: {
-//     marginTop: 8,
-//   },
-//   linkText: {
-//     marginTop: 16,
-//     textAlign: 'center',
-//     color: '#4b5563',
-//   },
-//   link: {
-//     color: '#3b82f6',
-//     fontWeight: '600',
-//   },
-//   googleButton: {
-//     marginTop: 16,
-//   },
-//   googleButtonInner: {
-//     backgroundColor: '#ffffff',
-//     borderWidth: 1,
-//     borderColor: '#d1d5db',
-//     borderRadius: 8,
-//     padding: 12,
-//     alignItems: 'center',
-//   },
-//   googleButtonContent: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//   },
-//   googleIcon: {
-//     marginRight: 10,
-//   },
-//   googleButtonText: {
-//     color: '#374151',
-//     fontSize: 16,
-//     fontWeight: '500',
-//   },
-// });
-
 import React, { useState } from 'react';
 import {
   View,
@@ -274,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -284,11 +14,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
-import { supabase } from '../src/lib/supabase';
 import { login } from '../src/api/auth';
-import { storeToken } from '../src/utils/storage';
+import { removeToken, storeAuthSession } from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function LoginScreen() {
@@ -297,17 +27,20 @@ export default function LoginScreen() {
   // States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
 
-  // Email/Password login
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
     try {
+      await removeToken();
       const data = await login({ email, password });
-      await storeToken(data.access_token);
+      if (!data.access_token) {
+        throw new Error('No active session found. Please log in again.');
+      }
+      await storeAuthSession(data.access_token, data.refresh_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
       Alert.alert('Success', `Welcome ${data.user.name}`);
       router.replace('/sessions');
@@ -317,72 +50,20 @@ export default function LoginScreen() {
     }
   };
 
-  // Google OAuth login (Supabase)
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: 'studymobile://auth/callback' },
-      });
-
-      if (error) throw new Error(error.message);
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          'studymobile://auth/callback',
-        );
-
-        if (result.type === 'success' && result.url) {
-          // Parse session directly from URL
-          const {
-            data: { session },
-          } = await supabase.auth.getSessionFromUrl(result.url);
-
-          if (session) {
-            await storeToken(session.access_token);
-            await AsyncStorage.setItem(
-              'user',
-              JSON.stringify({
-                id: session.user.id,
-                email: session.user.email,
-                name:
-                  session.user.user_metadata?.full_name ||
-                  session.user.email?.split('@')[0] ||
-                  'User',
-              }),
-            );
-            Alert.alert(
-              'Success',
-              `Welcome ${session.user.user_metadata?.full_name || 'User'}`,
-            );
-            router.replace('/(tabs)');
-          }
-        } else if (result.type === 'cancel') {
-          Alert.alert('Cancelled', 'Authentication was cancelled');
-        }
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Google login failed';
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
+<<<<<<< HEAD
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+=======
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+>>>>>>> 1ff6270 (fixing session)
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
@@ -444,6 +125,7 @@ export default function LoginScreen() {
               <Text style={styles.forgotPassText}>Forgot Password?</Text>
             </TouchableOpacity>
 
+<<<<<<< HEAD
             {/* --- ERROR MESSAGE DISPLAY --- */}
             {errorText ? (
               <View style={styles.errorContainer}>
@@ -452,6 +134,8 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
+=======
+>>>>>>> 1ff6270 (fixing session)
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleLogin}
@@ -590,4 +274,12 @@ const styles = StyleSheet.create({
   footer: { marginTop: 40, alignItems: 'center' },
   footerText: { color: '#64748b', fontSize: 14 },
   link: { color: '#7f13ec', fontWeight: '700' },
+<<<<<<< HEAD
+=======
+  logo: {
+    width: 55,
+    height: 55,
+    tintColor: '#7f13ec',
+  },
+>>>>>>> 1ff6270 (fixing session)
 });

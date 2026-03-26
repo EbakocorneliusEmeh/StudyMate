@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TouchableOpacity,
 } from 'react-native';
 <<<<<<< HEAD
 =======
@@ -166,10 +167,19 @@ export default function SessionsPage() {
           </TouchableOpacity>
 =======
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Study Sessions</Text>
-          <Text style={styles.headerSubtitle}>
-            Create and manage your study sessions
-          </Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Study Sessions</Text>
+            <Text style={styles.headerSubtitle}>
+              Create and manage your study sessions
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/edit-profile')}
+            style={styles.profileButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-circle-outline" size={32} color="#7f13ec" />
+          </TouchableOpacity>
         </View>
 
         {showCreateForm && (

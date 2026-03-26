@@ -4,7 +4,6 @@ import React, { useCallback, useState } from 'react';
 import {
   Alert,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,6 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+<<<<<<< HEAD
+=======
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { CreateSessionForm } from '../components/CreateSessionForm';
+>>>>>>> 1ff6270 (fixing session)
 import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
@@ -97,6 +101,7 @@ export default function SessionsPage() {
           />
         }
       >
+<<<<<<< HEAD
         {/* PROGRESS GRID - LAYERED ELEVATION */}
         <View style={styles.progressGrid}>
           <View style={[styles.progressCard, styles.activeCard]}>
@@ -159,6 +164,23 @@ export default function SessionsPage() {
             </View>
             <Text style={styles.modeLabel}>Flashcards</Text>
           </TouchableOpacity>
+=======
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Study Sessions</Text>
+          <Text style={styles.headerSubtitle}>
+            Create and manage your study sessions
+          </Text>
+        </View>
+
+        {showCreateForm && (
+          <CreateSessionForm onSuccess={handleSessionCreated} />
+        )}
+
+        <View style={styles.sessionsContainer}>
+          <Text style={styles.sectionTitle}>
+            {sessions.length > 0 ? 'Your Sessions' : 'No sessions yet'}
+          </Text>
+>>>>>>> 1ff6270 (fixing session)
 
           <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
             <View
@@ -212,6 +234,7 @@ export default function SessionsPage() {
         </View>
       </ScrollView>
 
+<<<<<<< HEAD
       {/* FLOATING ACTION BUTTON - "THE JEWEL" */}
       <TouchableOpacity
         style={styles.fab}
@@ -241,6 +264,18 @@ export default function SessionsPage() {
           <Ionicons name="person-outline" size={24} color="#94a3b8" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
+=======
+      <View style={styles.tabBar}>
+        <LinearGradient
+          colors={['#7f13ec', '#6366f1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.activeTab}
+        >
+          <Ionicons name="add-circle" size={24} color="white" />
+          <Text style={styles.activeTabText}>Sessions</Text>
+        </LinearGradient>
+>>>>>>> 1ff6270 (fixing session)
       </View>
     </SafeAreaView>
   );

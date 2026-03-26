@@ -5,11 +5,11 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreateSessionForm } from '../../components/CreateSessionForm';
 import { SessionCard } from '../../components/SessionCard';
 import { ApiError, deleteSession, getSessions } from '../../src/api/sessions';

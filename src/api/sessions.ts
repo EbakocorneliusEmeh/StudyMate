@@ -1,10 +1,4 @@
-import { supabase } from '../lib/supabase';
-import {
-  getRefreshToken,
-  getToken,
-  removeToken,
-  storeAuthSession,
-} from '../utils/storage';
+
 
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -67,62 +61,18 @@ const getAuthToken = async (): Promise<string> => {
   return token;
 };
 
-const fetchWithAuth = async (
-  path: string,
-  init: RequestInit,
-): Promise<Response> => {
-  const token = await getAuthToken();
-  const requestHeaders = {
-    ...(init.headers || {}),
-    Authorization: `Bearer ${token}`,
-  };
-
-  let res = await fetch(`${BACKEND_URL}${path}`, {
-    ...init,
-    headers: requestHeaders,
-  });
-
-  if (res.status !== 401) {
-    return res;
-  }
-
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) {
-    await removeToken();
-    throw new ApiError('Session expired. Please log in again.', 401);
-  }
-
-  const { data, error } = await supabase.auth.refreshSession({
-    refresh_token: refreshToken,
-  });
-
-  if (error || !data.session?.access_token) {
-    await removeToken();
-    throw new ApiError('Session expired. Please log in again.', 401);
-  }
-
-  await storeAuthSession(data.session.access_token, data.session.refresh_token);
-
-  res = await fetch(`${BACKEND_URL}${path}`, {
-    ...init,
-    headers: {
-      ...(init.headers || {}),
-      Authorization: `Bearer ${data.session.access_token}`,
-    },
-  });
-
-  return res;
-};
-
 export const createSession = async (
   title: string,
   subject?: string,
 ): Promise<StudySession> => {
   try {
-    const res = await fetchWithAuth('/api/session/create', {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ title, subject }),
     });
@@ -156,8 +106,13 @@ export const createSession = async (
 
 export const getSessions = async (): Promise<StudySessionListResponse> => {
   try {
-    const res = await fetchWithAuth('/api/session/list', {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/list`, {
       method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     let data;
@@ -189,8 +144,13 @@ export const getSessions = async (): Promise<StudySessionListResponse> => {
 
 export const getSession = async (id: string): Promise<StudySession> => {
   try {
-    const res = await fetchWithAuth(`/api/session/${id}`, {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/${id}`, {
       method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     let data;
@@ -224,8 +184,13 @@ export const deleteSession = async (
   id: string,
 ): Promise<{ message: string }> => {
   try {
-    const res = await fetchWithAuth(`/api/session/${id}`, {
+    const token = await getAuthToken();
+
+    const res = await fetch(`${BACKEND_URL}/api/session/${id}`, {
       method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     let data;

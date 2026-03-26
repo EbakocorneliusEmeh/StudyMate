@@ -14,6 +14,15 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
+export const linking = {
+  prefixes: ['studymobile://', 'https://study-mobile.com'],
+  config: {
+    screens: {
+      'auth/callback': 'auth/callback',
+    },
+  },
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 

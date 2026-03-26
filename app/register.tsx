@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register } from '../src/api/auth';
 import { storeToken } from '../src/utils/storage';
@@ -53,6 +53,7 @@ export default function RegisterScreen() {
     setIsLoading(true);
 
     try {
+      await removeToken();
       const data = await register({ name, email, password });
 
       // 2. Storage

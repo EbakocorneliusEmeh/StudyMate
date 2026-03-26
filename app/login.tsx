@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,10 +14,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../src/api/auth';
-import { storeToken } from '../src/utils/storage';
+import { removeToken, storeAuthSession } from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function LoginScreen() {
@@ -28,40 +28,25 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setPasswordVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorText, setErrorText] = useState<string | null>(null); // New Error State
-
-  // Clear error message when the user starts typing again
-  useEffect(() => {
-    if (errorText) setErrorText(null);
-  }, [email, password]);
 
   const handleLogin = async () => {
-    setErrorText(null);
-
     if (!email || !password) {
-      setErrorText('Please fill in all fields.');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
-    setIsLoading(true);
-
     try {
+      await removeToken();
       const data = await login({ email, password });
-      await storeToken(data.access_token);
+      if (!data.access_token) {
+        throw new Error('No active session found. Please log in again.');
+      }
+      await storeAuthSession(data.access_token, data.refresh_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-      Alert.alert('Success', `Welcome, ${data.user.name}!`);
+      Alert.alert('Success', `Welcome ${data.user.name}`);
       router.replace('/sessions');
-    } catch (err: any) {
-      // Extract specific message from your NestJS AuthService
-      const message =
-        err?.response?.data?.message || err.message || 'Login failed';
-
-      // If NestJS returns an array of errors (from DTO validation), pick the first one
-      setErrorText(Array.isArray(message) ? message[0] : message);
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -71,10 +56,14 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
+<<<<<<< HEAD
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+=======
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+>>>>>>> 1ff6270 (fixing session)
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
@@ -136,6 +125,7 @@ export default function LoginScreen() {
               <Text style={styles.forgotPassText}>Forgot Password?</Text>
             </TouchableOpacity>
 
+<<<<<<< HEAD
             {/* --- ERROR MESSAGE DISPLAY --- */}
             {errorText ? (
               <View style={styles.errorContainer}>
@@ -144,6 +134,8 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
+=======
+>>>>>>> 1ff6270 (fixing session)
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleLogin}
@@ -282,4 +274,12 @@ const styles = StyleSheet.create({
   footer: { marginTop: 40, alignItems: 'center' },
   footerText: { color: '#64748b', fontSize: 14 },
   link: { color: '#7f13ec', fontWeight: '700' },
+<<<<<<< HEAD
+=======
+  logo: {
+    width: 55,
+    height: 55,
+    tintColor: '#7f13ec',
+  },
+>>>>>>> 1ff6270 (fixing session)
 });

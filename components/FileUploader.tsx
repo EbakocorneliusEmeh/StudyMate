@@ -3,20 +3,25 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { ApiError, deleteFile, UploadedFile, uploadFile, validateFile } from '../src/api/upload';
+import {
+  ApiError,
+  deleteFile,
+  UploadedFile,
+  uploadFile,
+  validateFile,
+} from '../src/api/upload';
 
-// Session interface for linking files
 interface Session {
   id: string;
   title: string;
@@ -31,7 +36,6 @@ interface FileUploaderProps {
   onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
 }
 
-// Status enum for upload states
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
@@ -40,16 +44,22 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   sessions,
   onUploadComplete,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string; type: string; size: number } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{
+    uri: string;
+    name: string;
+    type: string;
+    size: number;
+  } | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{ file: UploadedFile; sessionId: string }[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<
+    { file: UploadedFile; sessionId: string }[]
+  >([]);
 
-  // Reset state when modal opens
   React.useEffect(() => {
     if (visible) {
       resetState();
@@ -65,24 +75,22 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setSuccessMessage(null);
   };
 
-  // Request permissions and pick file
   const handleSelectFile = async () => {
     try {
       setStatus('selecting');
       setErrorMessage(null);
 
-      // Request media library permissions
-      const { status: permissionStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+      const { status: permissionStatus } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
       if (permissionStatus !== 'granted') {
         setErrorMessage('Permission to access media library is required');
         setStatus('error');
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
         selectionLimit: 1,
@@ -94,12 +102,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       }
 
       const asset = result.assets[0];
-      
-      // Get file info
+
       const fileInfo = await getFileInfo(asset);
-      
-      // Validate file
-      const validationError = validateFile({ type: fileInfo.type, size: fileInfo.size });
+
+      const validationError = validateFile({
+        type: fileInfo.type,
+        size: fileInfo.size,
+      });
       if (validationError) {
         setErrorMessage(validationError);
         setStatus('error');
@@ -114,15 +123,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
-  // Get file info from asset
   const getFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
     const uri = asset.uri;
     const name = uri.split('/').pop() || 'file';
-    
-    // Determine file type from extension
+
     let type = 'application/octet-stream';
     const extension = name.split('.').pop()?.toLowerCase();
-    
+
     const typeMap: Record<string, string> = {
       jpg: 'image/jpeg',
       jpeg: 'image/jpeg',
@@ -135,7 +142,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
-    
+
     if (extension && typeMap[extension]) {
       type = typeMap[extension];
     }
@@ -148,7 +155,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     };
   };
 
-  // Handle file upload
   const handleUpload = async () => {
     if (!selectedFile) {
       setErrorMessage('Please select a file first');
@@ -166,7 +172,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      // Simulate progress (since fetch doesn't provide upload progress)
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
@@ -183,7 +188,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           name: selectedFile.name,
           type: selectedFile.type,
         },
-        `session-${selectedSessionId}`
+        `session-${selectedSessionId}`,
       );
 
       clearInterval(progressInterval);
@@ -191,26 +196,25 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setStatus('success');
       setSuccessMessage('File uploaded successfully!');
 
-      // Add to uploaded files list
-      setUploadedFiles((prev) => [...prev, { file: result, sessionId: selectedSessionId }]);
+      setUploadedFiles((prev) => [
+        ...prev,
+        { file: result, sessionId: selectedSessionId },
+      ]);
 
-      // Callback if provided
       if (onUploadComplete) {
         onUploadComplete(result, selectedSessionId);
       }
 
-      // Reset for next upload after delay
       setTimeout(() => {
         setSelectedFile(null);
         setStatus('idle');
         setProgress(0);
         setSuccessMessage(null);
       }, 2000);
-
     } catch (error) {
       setProgress(0);
       setStatus('error');
-      
+
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else if (error instanceof Error) {
@@ -221,45 +225,37 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
-  // Handle file deletion
   const handleDeleteFile = async (fileUrl: string, index: number) => {
-    Alert.alert(
-      'Delete File',
-      'Are you sure you want to delete this file?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteFile(fileUrl);
-              setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-              Alert.alert('Success', 'File deleted successfully');
-            } catch {
-              Alert.alert('Error', 'Failed to delete file');
-            }
-          },
+    Alert.alert('Delete File', 'Are you sure you want to delete this file?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteFile(fileUrl);
+            setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+            Alert.alert('Success', 'File deleted successfully');
+          } catch {
+            Alert.alert('Error', 'Failed to delete file');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  // Get selected session title
   const getSelectedSessionTitle = () => {
     if (!selectedSessionId) return 'Select a session';
     const session = sessions.find((s) => s.id === selectedSessionId);
     return session?.title || 'Unknown session';
   };
 
-  // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Get file icon based on type
   const getFileIcon = (type: string) => {
     if (type.startsWith('image/')) return 'image-outline';
     if (type === 'application/pdf') return 'document-text-outline';
@@ -268,13 +264,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     return 'attach-outline';
   };
 
-  // Get status color (reserved for future use)
   const _getStatusColor = () => {
     switch (status) {
-      case 'success': return '#10b981';
-      case 'error': return '#ef4444';
-      case 'uploading': return '#7f13ec';
-      default: return '#6b7280';
+      case 'success':
+        return '#10b981';
+      case 'error':
+        return '#ef4444';
+      case 'uploading':
+        return '#7f13ec';
+      default:
+        return '#6b7280';
     }
   };
 
@@ -286,7 +285,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Upload File</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -295,15 +293,18 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         <View style={styles.content}>
-          {/* Drop Zone / Selection Area */}
           <View style={styles.dropZone}>
             {selectedFile ? (
               <View style={styles.selectedFileContainer}>
                 <View style={styles.fileIconContainer}>
-                  <Ionicons 
-                    name={getFileIcon(selectedFile.type) as keyof typeof Ionicons.glyphMap} 
-                    size={40} 
-                    color="#7f13ec" 
+                  <Ionicons
+                    name={
+                      getFileIcon(
+                        selectedFile.type,
+                      ) as keyof typeof Ionicons.glyphMap
+                    }
+                    size={40}
+                    color="#7f13ec"
                   />
                 </View>
                 <View style={styles.fileInfo}>
@@ -314,7 +315,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     {formatFileSize(selectedFile.size)}
                   </Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setSelectedFile(null)}
                   style={styles.removeFileButton}
                 >
@@ -322,7 +323,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.selectButton}
                 onPress={handleSelectFile}
                 disabled={status === 'selecting' || status === 'uploading'}
@@ -331,21 +332,22 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                   <ActivityIndicator size="large" color="#7f13ec" />
                 ) : (
                   <>
-                    <Ionicons name="cloud-upload-outline" size={48} color="#7f13ec" />
+                    <Ionicons
+                      name="cloud-upload-outline"
+                      size={48}
+                      color="#7f13ec"
+                    />
                     <Text style={styles.selectTitle}>Tap to select a file</Text>
-                    <Text style={styles.selectSubtitle}>
-                      or drag and drop
-                    </Text>
+                    <Text style={styles.selectSubtitle}>or drag and drop</Text>
                   </>
                 )}
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Session Selector */}
           <View style={styles.sessionSection}>
             <Text style={styles.sectionLabel}>Link to Session</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.sessionSelector}
               onPress={() => setShowSessionPicker(true)}
               disabled={status === 'uploading'}
@@ -358,19 +360,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Progress Indicator */}
           {status === 'uploading' && (
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                <View
+                  style={[styles.progressFill, { width: `${progress}%` }]}
+                />
               </View>
-              <Text style={styles.progressText}>
-                Uploading... {progress}%
-              </Text>
+              <Text style={styles.progressText}>Uploading... {progress}%</Text>
             </View>
           )}
 
-          {/* Status Messages */}
           {errorMessage && (
             <View style={styles.messageContainer}>
               <Ionicons name="alert-circle" size={20} color="#ef4444" />
@@ -385,26 +385,34 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             </View>
           )}
 
-          {/* File Type Info */}
           <View style={styles.infoContainer}>
-            <Ionicons name="information-circle-outline" size={16} color="#94a3b8" />
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color="#94a3b8"
+            />
             <Text style={styles.infoText}>
               Allowed: Images, PDF, Text, Word documents (max 10MB)
             </Text>
           </View>
 
-          {/* Upload Button */}
           <TouchableOpacity
             style={[
               styles.uploadButton,
-              (!selectedFile || !selectedSessionId || status === 'uploading') && 
-              styles.uploadButtonDisabled
+              (!selectedFile || !selectedSessionId || status === 'uploading') &&
+                styles.uploadButtonDisabled,
             ]}
             onPress={handleUpload}
-            disabled={!selectedFile || !selectedSessionId || status === 'uploading'}
+            disabled={
+              !selectedFile || !selectedSessionId || status === 'uploading'
+            }
           >
             <LinearGradient
-              colors={status === 'uploading' ? ['#9ca3af', '#9ca3af'] : ['#7f13ec', '#6366f1']}
+              colors={
+                status === 'uploading'
+                  ? ['#9ca3af', '#9ca3af']
+                  : ['#7f13ec', '#6366f1']
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.uploadButtonGradient}
@@ -425,13 +433,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             <View style={styles.uploadedFilesSection}>
               <Text style={styles.sectionLabel}>Uploaded Files</Text>
               {uploadedFiles.map((item, index) => {
-                const session = sessions.find(s => s.id === item.sessionId);
+                const session = sessions.find((s) => s.id === item.sessionId);
                 return (
                   <View key={index} style={styles.uploadedFileItem}>
-                    <Ionicons 
-                      name={getFileIcon(item.file.file_type) as keyof typeof Ionicons.glyphMap} 
-                      size={24} 
-                      color="#7f13ec" 
+                    <Ionicons
+                      name={
+                        getFileIcon(
+                          item.file.file_type,
+                        ) as keyof typeof Ionicons.glyphMap
+                      }
+                      size={24}
+                      color="#7f13ec"
                     />
                     <View style={styles.uploadedFileInfo}>
                       <Text style={styles.uploadedFileName} numberOfLines={1}>
@@ -442,9 +454,15 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                       </Text>
                     </View>
                     <TouchableOpacity
-                      onPress={() => handleDeleteFile(item.file.file_url, index)}
+                      onPress={() =>
+                        handleDeleteFile(item.file.file_url, index)
+                      }
                     >
-                      <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#ef4444"
+                      />
                     </TouchableOpacity>
                   </View>
                 );
@@ -460,7 +478,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           animationType="fade"
           onRequestClose={() => setShowSessionPicker(false)}
         >
-          <Pressable 
+          <Pressable
             style={styles.pickerOverlay}
             onPress={() => setShowSessionPicker(false)}
           >
@@ -471,12 +489,18 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                   <Ionicons name="close" size={24} color="#6b7280" />
                 </TouchableOpacity>
               </View>
-              
+
               {sessions.length === 0 ? (
                 <View style={styles.emptySessions}>
-                  <Ionicons name="folder-open-outline" size={48} color="#cbd5e1" />
+                  <Ionicons
+                    name="folder-open-outline"
+                    size={48}
+                    color="#cbd5e1"
+                  />
                   <Text style={styles.emptyText}>No sessions available</Text>
-                  <Text style={styles.emptySubtext}>Create a session first to upload files</Text>
+                  <Text style={styles.emptySubtext}>
+                    Create a session first to upload files
+                  </Text>
                 </View>
               ) : (
                 <FlatList
@@ -486,7 +510,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.sessionItem,
-                        selectedSessionId === item.id && styles.sessionItemSelected
+                        selectedSessionId === item.id &&
+                          styles.sessionItemSelected,
                       ]}
                       onPress={() => {
                         setSelectedSessionId(item.id);
@@ -494,17 +519,24 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                       }}
                     >
                       <View style={styles.sessionItemIcon}>
-                        <Ionicons 
-                          name="folder" 
-                          size={20} 
-                          color={selectedSessionId === item.id ? '#ffffff' : '#7f13ec'} 
+                        <Ionicons
+                          name="folder"
+                          size={20}
+                          color={
+                            selectedSessionId === item.id
+                              ? '#ffffff'
+                              : '#7f13ec'
+                          }
                         />
                       </View>
                       <View style={styles.sessionItemContent}>
-                        <Text style={[
-                          styles.sessionItemTitle,
-                          selectedSessionId === item.id && styles.sessionItemTitleSelected
-                        ]}>
+                        <Text
+                          style={[
+                            styles.sessionItemTitle,
+                            selectedSessionId === item.id &&
+                              styles.sessionItemTitleSelected,
+                          ]}
+                        >
                           {item.title}
                         </Text>
                         {item.subject && (
@@ -514,11 +546,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                         )}
                       </View>
                       {selectedSessionId === item.id && (
-                        <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={20}
+                          color="#ffffff"
+                        />
                       )}
                     </TouchableOpacity>
                   )}
-                  ItemSeparatorComponent={() => <View style={styles.separator} />}
+                  ItemSeparatorComponent={() => (
+                    <View style={styles.separator} />
+                  )}
                 />
               )}
             </View>
@@ -730,7 +768,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
-  // Session Picker Modal Styles
   pickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

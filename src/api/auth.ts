@@ -1,13 +1,13 @@
-
-
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.178:3000';
+    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.172:3000';
 
 interface AuthResponse {
   access_token: string;
+  refresh_token?: string;
   user: {
+    id: string;
     name: string;
     email: string;
   };

@@ -90,7 +90,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
         selectionLimit: 1,

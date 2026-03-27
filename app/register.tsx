@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register } from '../src/api/auth';
-import { storeToken } from '../src/utils/storage';
+import { storeToken, removeToken } from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function RegisterScreen() {

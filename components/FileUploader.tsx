@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -21,6 +22,7 @@ import {
   uploadFile,
   validateFile,
 } from '../src/api/upload';
+import { linkFileToSession } from '../src/api/sessions';
 
 interface Session {
   id: string;
@@ -75,7 +77,27 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setSuccessMessage(null);
   };
 
-  const handleSelectFile = async () => {
+  const setValidatedFile = (fileInfo: {
+    uri: string;
+    name: string;
+    type: string;
+    size: number;
+  }) => {
+    const validationError = validateFile({
+      type: fileInfo.type,
+      size: fileInfo.size,
+    });
+    if (validationError) {
+      setErrorMessage(validationError);
+      setStatus('error');
+      return;
+    }
+
+    setSelectedFile(fileInfo);
+    setStatus('idle');
+  };
+
+  const handleSelectImage = async () => {
     try {
       setStatus('selecting');
       setErrorMessage(null);
@@ -90,10 +112,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
-        selectionLimit: 1,
+        allowsMultipleSelection: false,
+        legacy: Platform.OS === 'android',
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
@@ -102,32 +125,75 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       }
 
       const asset = result.assets[0];
-
-      const fileInfo = await getFileInfo(asset);
-
-      const validationError = validateFile({
-        type: fileInfo.type,
-        size: fileInfo.size,
-      });
-      if (validationError) {
-        setErrorMessage(validationError);
-        setStatus('error');
-        return;
-      }
-
-      setSelectedFile(fileInfo);
-      setStatus('idle');
-    } catch {
-      setErrorMessage('Failed to select file. Please try again.');
+      const fileInfo = await getImageFileInfo(asset);
+      setValidatedFile(fileInfo);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to select file. Please try again.';
+      setErrorMessage(message);
       setStatus('error');
     }
   };
 
-  const getFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
-    const uri = asset.uri;
-    const name = uri.split('/').pop() || 'file';
+  const handleSelectDocument = async () => {
+    try {
+      setStatus('selecting');
+      setErrorMessage(null);
 
-    let type = 'application/octet-stream';
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'text/plain',
+          'text/markdown',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        setStatus('idle');
+        return;
+      }
+
+      const fileInfo = getDocumentFileInfo(result.assets[0]);
+      setValidatedFile(fileInfo);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to select document. Please try again.';
+      setErrorMessage(message);
+      setStatus('error');
+    }
+  };
+
+  const handleSelectFile = () => {
+    Alert.alert('Select File Type', 'Choose what you want to upload', [
+      {
+        text: 'Image',
+        onPress: () => {
+          void handleSelectImage();
+        },
+      },
+      {
+        text: 'PDF or Note',
+        onPress: () => {
+          void handleSelectDocument();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const getImageFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
+    const uri = asset.uri;
+    const name = asset.fileName || uri.split('/').pop() || 'file';
+
+    let type = asset.mimeType || 'application/octet-stream';
     const extension = name.split('.').pop()?.toLowerCase();
 
     const typeMap: Record<string, string> = {
@@ -152,6 +218,30 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       name,
       type,
       size: asset.fileSize || 0,
+    };
+  };
+
+  const getDocumentFileInfo = (asset: DocumentPicker.DocumentPickerAsset) => {
+    let type = asset.mimeType || 'application/octet-stream';
+    const extension = asset.name.split('.').pop()?.toLowerCase();
+
+    const typeMap: Record<string, string> = {
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      md: 'text/markdown',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+
+    if (extension && typeMap[extension]) {
+      type = typeMap[extension];
+    }
+
+    return {
+      uri: asset.uri,
+      name: asset.name,
+      type,
+      size: asset.size || 0,
     };
   };
 
@@ -182,27 +272,39 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         });
       }, 200);
 
-      const result = await uploadFile(
+      // Step 1: Upload the file to /api/upload
+      const uploadResult = await uploadFile(
         {
           uri: selectedFile.uri,
           name: selectedFile.name,
           type: selectedFile.type,
         },
+        selectedSessionId,
         `session-${selectedSessionId}`,
       );
+
+      if (!uploadResult.linked_to_session) {
+        await linkFileToSession(
+          selectedSessionId,
+          uploadResult.file_url,
+          uploadResult.file_name,
+          uploadResult.file_type,
+          uploadResult.file_size,
+        );
+      }
 
       clearInterval(progressInterval);
       setProgress(100);
       setStatus('success');
-      setSuccessMessage('File uploaded successfully!');
+      setSuccessMessage('File uploaded and linked to session successfully!');
 
       setUploadedFiles((prev) => [
         ...prev,
-        { file: result, sessionId: selectedSessionId },
+        { file: uploadResult, sessionId: selectedSessionId },
       ]);
 
       if (onUploadComplete) {
-        onUploadComplete(result, selectedSessionId);
+        onUploadComplete(uploadResult, selectedSessionId);
       }
 
       setTimeout(() => {
@@ -338,7 +440,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                       color="#7f13ec"
                     />
                     <Text style={styles.selectTitle}>Tap to select a file</Text>
-                    <Text style={styles.selectSubtitle}>or drag and drop</Text>
+                    <Text style={styles.selectSubtitle}>
+                      Images, PDFs, and note files
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>

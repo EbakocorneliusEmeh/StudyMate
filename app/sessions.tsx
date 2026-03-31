@@ -10,13 +10,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  TouchableOpacity,
 } from 'react-native';
-<<<<<<< HEAD
-=======
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CreateSessionForm } from '../components/CreateSessionForm';
->>>>>>> 1ff6270 (fixing session)
 import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
@@ -75,11 +70,14 @@ export default function SessionsPage() {
       {/* PIXEL-PERFECT HEADER */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity
+            onPress={() => router.push('/edit-profile')}
+            style={styles.avatarContainer}
+          >
             <View style={styles.avatarPlaceholder}>
               <Ionicons name="person" size={24} color="#7f13ec" />
             </View>
-          </View>
+          </TouchableOpacity>
           <View>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userNameText}>{userName}</Text>
@@ -102,7 +100,6 @@ export default function SessionsPage() {
           />
         }
       >
-<<<<<<< HEAD
         {/* PROGRESS GRID - LAYERED ELEVATION */}
         <View style={styles.progressGrid}>
           <View style={[styles.progressCard, styles.activeCard]}>
@@ -141,7 +138,7 @@ export default function SessionsPage() {
           </View>
         </View>
 
-        {/* STUDY MODES - HORIZONTAL COGNITIVE FLOW */}
+        {/* STUDY MODES */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeaderTitle}>Study Modes</Text>
           <View style={styles.aiBadge}>
@@ -165,32 +162,6 @@ export default function SessionsPage() {
             </View>
             <Text style={styles.modeLabel}>Flashcards</Text>
           </TouchableOpacity>
-=======
-        <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Study Sessions</Text>
-            <Text style={styles.headerSubtitle}>
-              Create and manage your study sessions
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/edit-profile')}
-            style={styles.profileButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="person-circle-outline" size={32} color="#7f13ec" />
-          </TouchableOpacity>
-        </View>
-
-        {showCreateForm && (
-          <CreateSessionForm onSuccess={handleSessionCreated} />
-        )}
-
-        <View style={styles.sessionsContainer}>
-          <Text style={styles.sectionTitle}>
-            {sessions.length > 0 ? 'Your Sessions' : 'No sessions yet'}
-          </Text>
->>>>>>> 1ff6270 (fixing session)
 
           <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
             <View
@@ -244,8 +215,7 @@ export default function SessionsPage() {
         </View>
       </ScrollView>
 
-<<<<<<< HEAD
-      {/* FLOATING ACTION BUTTON - "THE JEWEL" */}
+      {/* FLOATING ACTION BUTTON */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/create-session')}
@@ -254,7 +224,7 @@ export default function SessionsPage() {
         <Ionicons name="add" size={32} color="white" />
       </TouchableOpacity>
 
-      {/* NAVIGATION BAR - GLASSMORPHISM EFFECT */}
+      {/* NAVIGATION BAR */}
       <View style={styles.navBar}>
         <TouchableOpacity style={styles.navItem}>
           <View style={styles.activeNavIcon}>
@@ -270,22 +240,13 @@ export default function SessionsPage() {
           <Ionicons name="clipboard-outline" size={24} color="#94a3b8" />
           <Text style={styles.navLabel}>Quiz</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push('/edit-profile')}
+        >
           <Ionicons name="person-outline" size={24} color="#94a3b8" />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
-=======
-      <View style={styles.tabBar}>
-        <LinearGradient
-          colors={['#7f13ec', '#6366f1']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.activeTab}
-        >
-          <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.activeTabText}>Sessions</Text>
-        </LinearGradient>
->>>>>>> 1ff6270 (fixing session)
       </View>
     </SafeAreaView>
   );
@@ -352,7 +313,6 @@ const styles = StyleSheet.create({
     padding: 20,
     height: 140,
     justifyContent: 'space-between',
-    margin: -5,
   },
   activeCard: {
     backgroundColor: '#7f13ec',

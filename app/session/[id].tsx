@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getSession, StudySession } from '../../src/api/sessions';
+import { FileUploader } from '../../components/FileUploader';
 
 export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
@@ -19,6 +20,7 @@ export default function SessionDetailScreen() {
   const router = useRouter();
   const [session, setSession] = useState<StudySession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFileUploader, setShowFileUploader] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -111,14 +113,33 @@ export default function SessionDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.placeholderSection}>
-          <Ionicons name="folder-outline" size={40} color="#cbd5e1" />
-          <Text style={styles.placeholderText}>Files section</Text>
-          <Text style={styles.placeholderSubtext}>
-            File upload feature coming soon
-          </Text>
+        <View style={styles.filesSection}>
+          <Text style={styles.sectionTitle}>Files</Text>
+          <View style={styles.emptyFilesContainer}>
+            <Ionicons name="folder-open-outline" size={40} color="#cbd5e1" />
+            <Text style={styles.emptyFilesText}>
+              Files will appear here after upload
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={() => setShowFileUploader(true)}
+          >
+            <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
+            <Text style={styles.uploadButtonText}>Upload File</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <FileUploader
+        visible={showFileUploader}
+        onClose={() => setShowFileUploader(false)}
+        sessions={session ? [session] : []}
+        onUploadComplete={(file, _sessionId) => {
+          console.log('File uploaded:', file);
+          Alert.alert('Success', 'File uploaded successfully!');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -226,5 +247,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     marginTop: 4,
+  },
+  filesSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  emptyFilesContainer: {
+    alignItems: 'center',
+    padding: 24,
+  },
+  emptyFilesText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 8,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#7f13ec',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

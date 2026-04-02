@@ -175,7 +175,11 @@ export default function SessionsPage() {
             <Text style={styles.modeLabel}>Quiz Mode</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={styles.modeChip}
+            activeOpacity={0.9}
+            onPress={() => router.push('/ai-companion')}
+          >
             <View
               style={[
                 styles.iconCircle,

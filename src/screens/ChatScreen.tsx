@@ -81,7 +81,7 @@ export default function ChatScreen() {
       createdAt: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     const currentInput = input;
     setInput('');
@@ -105,7 +105,7 @@ export default function ChatScreen() {
         fromUser: false,
         createdAt: new Date(),
       };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
       const fallbackMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -113,7 +113,7 @@ export default function ChatScreen() {
         fromUser: false,
         createdAt: new Date(),
       };
-      setMessages(prev => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, fallbackMsg]);
       console.error(err);
     } finally {
       setLoading(false);
@@ -155,7 +155,9 @@ export default function ChatScreen() {
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={item.fromUser ? styles.messageRowUser : styles.messageRowAi}>
+          <View
+            style={item.fromUser ? styles.messageRowUser : styles.messageRowAi}
+          >
             <View
               style={[
                 styles.bubble,

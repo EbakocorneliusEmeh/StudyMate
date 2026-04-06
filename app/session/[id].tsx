@@ -249,7 +249,9 @@ export default function SessionDetailScreen() {
                   <View style={styles.fileIconContainer}>
                     <Ionicons
                       name={
-                        getFileIcon(file.file_type) as keyof typeof Ionicons.glyphMap
+                        getFileIcon(
+                          file.file_type,
+                        ) as keyof typeof Ionicons.glyphMap
                       }
                       size={22}
                       color="#7f13ec"
@@ -263,11 +265,7 @@ export default function SessionDetailScreen() {
                       {formatFileSize(file.file_size)}
                     </Text>
                   </View>
-                  <Ionicons
-                    name="open-outline"
-                    size={20}
-                    color="#94a3b8"
-                  />
+                  <Ionicons name="open-outline" size={20} color="#94a3b8" />
                 </TouchableOpacity>
               ))}
             </View>
@@ -280,13 +278,22 @@ export default function SessionDetailScreen() {
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={() => setShowFileUploader(true)}
-          >
-            <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
-            <Text style={styles.uploadButtonText}>Upload File</Text>
-          </TouchableOpacity>
+          <View style={styles.uploadButtonContainer}>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={() => {
+                if (!session) {
+                  Alert.alert('Error', 'No session available');
+                  return;
+                }
+                setShowFileUploader(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
+              <Text style={styles.uploadButtonText}>Upload File</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.flashcardsSection}>
@@ -563,17 +570,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  placeholderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginTop: 12,
-  },
-  placeholderSubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginTop: 4,
-  },
   filesSection: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -627,6 +623,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
+  uploadButtonContainer: {
+    marginTop: 12,
+  },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -634,7 +633,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#7f13ec',
     borderRadius: 8,
     padding: 12,
-    marginTop: 12,
   },
   uploadButtonText: {
     color: '#ffffff',

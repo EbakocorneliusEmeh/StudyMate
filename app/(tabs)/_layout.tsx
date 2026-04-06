@@ -15,7 +15,7 @@ export default function TabLayout() {
           paddingBottom: 20,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: '#7f13ec', // The Primary Purple from your HTML
+        tabBarActiveTintColor: '#7f13ec',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarLabelStyle: {
           fontSize: 10,
@@ -53,6 +53,24 @@ export default function TabLayout() {
           title: 'Quiz',
           tabBarIcon: ({ color }) => (
             <Ionicons name="help-circle-outline" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="progress"
+        options={{
+          title: 'Progress',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="stats-chart-outline" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="collaboration"
+        options={{
+          title: 'Team',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people-outline" size={24} color={color} />
           ),
         }}
       />

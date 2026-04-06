@@ -70,3 +70,8 @@ export const uploadFile = async (
     fileType: response.data.fileType || response.data.file_type || type,
   };
 };
+
+// Re-export from api modules for convenience
+export * from '../api/spacedRepetition';
+export * from '../api/collaboration';
+export * from '../api/progress';

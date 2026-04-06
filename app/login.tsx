@@ -328,7 +328,8 @@ export default function LoginScreen() {
       }
 
       // Store tokens and user info
-      await storeAuthSession(data.access_token, data.refresh_token || '');
+      const refreshToken = data.refresh_token || null;
+      await storeAuthSession(data.access_token, refreshToken);
 
       if (data.user) {
         await AsyncStorage.setItem('user', JSON.stringify(data.user));

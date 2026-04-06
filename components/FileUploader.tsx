@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -65,6 +64,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   React.useEffect(() => {
     if (visible) {
       resetState();
+      if (sessions && sessions.length > 0) {
+        setSelectedSessionId(sessions[0].id);
+      }
     }
   }, [visible]);
 
@@ -172,21 +174,42 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const handleSelectFile = () => {
-    Alert.alert('Select File Type', 'Choose what you want to upload', [
-      {
-        text: 'Image',
-        onPress: () => {
-          void handleSelectImage();
+    const isWeb = Platform.OS === 'web';
+
+    if (isWeb) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const fileInfo = {
+            uri: file,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+          };
+          setValidatedFile(fileInfo);
+        }
+      };
+      input.click();
+    } else {
+      Alert.alert('Select File Type', 'Choose what you want to upload', [
+        {
+          text: 'Image',
+          onPress: () => {
+            void handleSelectImage();
+          },
         },
-      },
-      {
-        text: 'PDF or Note',
-        onPress: () => {
-          void handleSelectDocument();
+        {
+          text: 'PDF or Note',
+          onPress: () => {
+            void handleSelectDocument();
+          },
         },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
   };
 
   const getImageFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -379,14 +402,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
+    <View style={styles.overlay}>
+      <Pressable style={styles.overlayBackground} onPress={onClose} />
+      <View style={styles.modalContent}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Upload File</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -576,102 +599,137 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         {/* Session Picker Modal */}
-        <Modal
-          visible={showSessionPicker}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowSessionPicker(false)}
-        >
-          <Pressable
-            style={styles.pickerOverlay}
-            onPress={() => setShowSessionPicker(false)}
-          >
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>Select a Session</Text>
-                <TouchableOpacity onPress={() => setShowSessionPicker(false)}>
-                  <Ionicons name="close" size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-
-              {sessions.length === 0 ? (
-                <View style={styles.emptySessions}>
-                  <Ionicons
-                    name="folder-open-outline"
-                    size={48}
-                    color="#cbd5e1"
-                  />
-                  <Text style={styles.emptyText}>No sessions available</Text>
-                  <Text style={styles.emptySubtext}>
-                    Create a session first to upload files
-                  </Text>
+        {showSessionPicker && (
+          <View style={styles.sessionPickerContainer}>
+            <Pressable
+              style={styles.sessionPickerOverlay}
+              onPress={() => setShowSessionPicker(false)}
+            >
+              <View style={styles.sessionPickerContent}>
+                <View style={styles.pickerHeader}>
+                  <Text style={styles.pickerTitle}>Select a Session</Text>
+                  <TouchableOpacity onPress={() => setShowSessionPicker(false)}>
+                    <Ionicons name="close" size={24} color="#6b7280" />
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                <FlatList
-                  data={sessions}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.sessionItem,
-                        selectedSessionId === item.id &&
-                          styles.sessionItemSelected,
-                      ]}
-                      onPress={() => {
-                        setSelectedSessionId(item.id);
-                        setShowSessionPicker(false);
-                      }}
-                    >
-                      <View style={styles.sessionItemIcon}>
-                        <Ionicons
-                          name="folder"
-                          size={20}
-                          color={
-                            selectedSessionId === item.id
-                              ? '#ffffff'
-                              : '#7f13ec'
-                          }
-                        />
-                      </View>
-                      <View style={styles.sessionItemContent}>
-                        <Text
-                          style={[
-                            styles.sessionItemTitle,
-                            selectedSessionId === item.id &&
-                              styles.sessionItemTitleSelected,
-                          ]}
-                        >
-                          {item.title}
-                        </Text>
-                        {item.subject && (
-                          <Text style={styles.sessionItemSubject}>
-                            {item.subject}
+
+                {sessions.length === 0 ? (
+                  <View style={styles.emptySessions}>
+                    <Ionicons
+                      name="folder-open-outline"
+                      size={48}
+                      color="#cbd5e1"
+                    />
+                    <Text style={styles.emptyText}>No sessions available</Text>
+                    <Text style={styles.emptySubtext}>
+                      Create a session first to upload files
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={sessions}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.sessionItem,
+                          selectedSessionId === item.id &&
+                            styles.sessionItemSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedSessionId(item.id);
+                          setShowSessionPicker(false);
+                        }}
+                      >
+                        <View style={styles.sessionItemIcon}>
+                          <Ionicons
+                            name="folder"
+                            size={20}
+                            color={
+                              selectedSessionId === item.id
+                                ? '#ffffff'
+                                : '#7f13ec'
+                            }
+                          />
+                        </View>
+                        <View style={styles.sessionItemContent}>
+                          <Text
+                            style={[
+                              styles.sessionItemTitle,
+                              selectedSessionId === item.id &&
+                                styles.sessionItemTitleSelected,
+                            ]}
+                          >
+                            {item.title}
                           </Text>
+                          {item.subject && (
+                            <Text style={styles.sessionItemSubject}>
+                              {item.subject}
+                            </Text>
+                          )}
+                        </View>
+                        {selectedSessionId === item.id && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#ffffff"
+                          />
                         )}
-                      </View>
-                      {selectedSessionId === item.id && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color="#ffffff"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  ItemSeparatorComponent={() => (
-                    <View style={styles.separator} />
-                  )}
-                />
-              )}
-            </View>
-          </Pressable>
-        </Modal>
+                      </TouchableOpacity>
+                    )}
+                    ItemSeparatorComponent={() => (
+                      <View style={styles.separator} />
+                    )}
+                  />
+                )}
+              </View>
+            </Pressable>
+          </View>
+        )}
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    maxHeight: '90%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  sessionPickerContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1001,
+    padding: 20,
+  },
+  sessionPickerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sessionPickerContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f7f6f8',

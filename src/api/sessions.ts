@@ -353,10 +353,9 @@
 //   }
 // };
 
-import { getToken } from '../utils/storage';
+import { getToken, refreshAccessToken } from '../utils/storage';
 
-// Simplified for Expo Go to ensure it always hits your computer
-const BACKEND_URL = 'http://192.168.1.172:3000';
+const BACKEND_URL = 'http://172.20.10.5:3000';
 
 export interface StudySession {
   id: string;
@@ -401,13 +400,44 @@ const isNetworkError = (error: unknown): boolean => {
   return false;
 };
 
+const _isTokenError = (error: unknown): boolean => {
+  if (error instanceof ApiError && error.status === 401) {
+    return true;
+  }
+  return false;
+};
+
 const getAuthToken = async (): Promise<string> => {
-  // Using your existing utility is cleaner
   const token = await getToken();
   if (!token) {
-    throw new ApiError('Not authenticated', 401);
+    throw new ApiError('Not authenticated. Please log in.', 401);
   }
   return token;
+};
+
+const makeAuthenticatedRequest = async (
+  url: string,
+  options: RequestInit,
+  retryOnUnauthorized = true,
+): Promise<Response> => {
+  const token = await getAuthToken();
+
+  const headers = {
+    ...options.headers,
+    Authorization: `Bearer ${token}`,
+  };
+
+  let res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 && retryOnUnauthorized) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers.Authorization = `Bearer ${newToken}`;
+      res = await fetch(url, { ...options, headers });
+    }
+  }
+
+  return res;
 };
 
 export const createSession = async (
@@ -415,22 +445,19 @@ export const createSession = async (
   subject?: string,
 ): Promise<StudySession> => {
   try {
-    const token = await getAuthToken();
-
-    const res = await fetch(`${BACKEND_URL}/api/session/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/create`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, subject }),
       },
-      body: JSON.stringify({ title, subject }),
-    });
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
@@ -453,25 +480,27 @@ export const createSession = async (
 
 export const getSessions = async (): Promise<StudySessionListResponse> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(`${BACKEND_URL}/api/session/list`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/list`,
+      { method: 'GET' },
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new ApiError('Session expired. Please log in again.', 401);
+      }
       throw new ApiError(
         data?.message || 'Failed to fetch sessions',
         res.status,
       );
+    }
     return data;
   } catch (error) {
     throw error instanceof ApiError
@@ -482,25 +511,27 @@ export const getSessions = async (): Promise<StudySessionListResponse> => {
 
 export const getSession = async (id: string): Promise<StudySession> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(`${BACKEND_URL}/api/session/${id}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/${id}`,
+      { method: 'GET' },
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new ApiError('Session expired. Please log in again.', 401);
+      }
       throw new ApiError(
         data?.message || 'Failed to fetch session',
         res.status,
       );
+    }
     return data;
   } catch (error) {
     throw error instanceof ApiError
@@ -513,25 +544,24 @@ export const deleteSession = async (
   id: string,
 ): Promise<{ message: string }> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(`${BACKEND_URL}/api/session/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/${id}`,
+      { method: 'DELETE' },
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
       throw new ApiError(
         data?.message || 'Failed to delete session',
         res.status,
       );
+    }
     return data;
   } catch (error) {
     throw error instanceof ApiError
@@ -544,22 +574,21 @@ export const getSessionFiles = async (
   sessionId: string,
 ): Promise<SessionFile[]> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(`${BACKEND_URL}/api/session/${sessionId}/files`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/${sessionId}/files`,
+      { method: 'GET' },
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
       throw new ApiError(data?.message || 'Failed to fetch files', res.status);
+    }
     return data.files || [];
   } catch (error) {
     throw error instanceof ApiError
@@ -576,31 +605,30 @@ export const linkFileToSession = async (
   fileSize: number,
 ): Promise<SessionFile> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(`${BACKEND_URL}/api/session/${sessionId}/files`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+    const res = await makeAuthenticatedRequest(
+      `${BACKEND_URL}/api/session/${sessionId}/files`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_url: fileUrl,
+          file_name: fileName,
+          file_type: fileType,
+          file_size: fileSize,
+        }),
       },
-      body: JSON.stringify({
-        file_url: fileUrl,
-        file_name: fileName,
-        file_type: fileType,
-        file_size: fileSize,
-      }),
-    });
+    );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
       throw new ApiError(data?.message || 'Failed to link file', res.status);
+    }
     return data;
   } catch (error) {
     throw error instanceof ApiError
@@ -614,25 +642,21 @@ export const unlinkFileFromSession = async (
   fileId: string,
 ): Promise<{ message: string }> => {
   try {
-    const token = await getAuthToken();
-    const res = await fetch(
+    const res = await makeAuthenticatedRequest(
       `${BACKEND_URL}/api/session/${sessionId}/files/${fileId}`,
-      {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      },
+      { method: 'DELETE' },
     );
 
     let data;
     try {
       data = await res.json();
     } catch (_e) {
-      // FIXED: renamed to _e
       throw new ApiError('Invalid response from server');
     }
 
-    if (!res.ok)
+    if (!res.ok) {
       throw new ApiError(data?.message || 'Failed to unlink file', res.status);
+    }
     return data;
   } catch (error) {
     throw error instanceof ApiError

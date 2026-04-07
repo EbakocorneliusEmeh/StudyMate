@@ -1,7 +1,10 @@
 import { api } from './axiosConfig';
 import { ProgressStats } from '../types';
 
-export const getProgress = async (startDate?: string, endDate?: string): Promise<any> => {
+export const getProgress = async (
+  startDate?: string,
+  endDate?: string,
+): Promise<any> => {
   const params: Record<string, string> = {};
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;

@@ -12,7 +12,13 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { createCard, getCards, getDueCards, reviewCard, deleteCard } from '../../src/api/spacedRepetition';
+import {
+  createCard,
+  getCards,
+  getDueCards,
+  reviewCard,
+  deleteCard,
+} from '../../src/api/spacedRepetition';
 import { Card, CardCreateInput, CardReviewInput } from '../../src/types';
 
 const QUALITY_LABELS = [
@@ -95,25 +101,21 @@ export default function FlashcardsScreen() {
   };
 
   const handleDeleteCard = async (id: string) => {
-    Alert.alert(
-      'Delete Card',
-      'Are you sure you want to delete this card?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCard(id);
-              loadCards();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete card');
-            }
-          },
+    Alert.alert('Delete Card', 'Are you sure you want to delete this card?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCard(id);
+            loadCards();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete card');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const startReview = (card: Card) => {
@@ -149,7 +151,12 @@ export default function FlashcardsScreen() {
           style={[styles.tab, activeTab === 'all' && styles.activeTab]}
           onPress={() => setActiveTab('all')}
         >
-          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'all' && styles.activeTabText,
+            ]}
+          >
             All ({cards.length})
           </Text>
         </TouchableOpacity>
@@ -157,7 +164,12 @@ export default function FlashcardsScreen() {
           style={[styles.tab, activeTab === 'due' && styles.activeTab]}
           onPress={() => setActiveTab('due')}
         >
-          <Text style={[styles.tabText, activeTab === 'due' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'due' && styles.activeTabText,
+            ]}
+          >
             Due ({dueCards.length})
           </Text>
         </TouchableOpacity>
@@ -167,7 +179,9 @@ export default function FlashcardsScreen() {
         <View style={styles.emptyContainer}>
           <Ionicons name="layers-outline" size={64} color="#d1d5db" />
           <Text style={styles.emptyText}>
-            {activeTab === 'due' ? 'No cards due for review!' : 'No flashcards yet'}
+            {activeTab === 'due'
+              ? 'No cards due for review!'
+              : 'No flashcards yet'}
           </Text>
           <TouchableOpacity
             style={styles.emptyButton}
@@ -187,8 +201,12 @@ export default function FlashcardsScreen() {
               onLongPress={() => handleDeleteCard(item.id)}
             >
               <View style={styles.cardContent}>
-                <Text style={styles.cardFront} numberOfLines={2}>{item.frontText}</Text>
-                <Text style={styles.cardBack} numberOfLines={1}>{item.backText}</Text>
+                <Text style={styles.cardFront} numberOfLines={2}>
+                  {item.frontText}
+                </Text>
+                <Text style={styles.cardBack} numberOfLines={1}>
+                  {item.backText}
+                </Text>
               </View>
               {item.nextReviewDate && (
                 <Text style={styles.cardDue}>
@@ -230,7 +248,10 @@ export default function FlashcardsScreen() {
               value={sessionId}
               onChangeText={setSessionId}
             />
-            <TouchableOpacity style={styles.submitButton} onPress={handleCreateCard}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleCreateCard}
+            >
               <Text style={styles.submitButtonText}>Create Card</Text>
             </TouchableOpacity>
           </View>
@@ -248,7 +269,9 @@ export default function FlashcardsScreen() {
             </View>
             {currentReviewCard && (
               <View style={styles.reviewCard}>
-                <Text style={styles.reviewFront}>{currentReviewCard.frontText}</Text>
+                <Text style={styles.reviewFront}>
+                  {currentReviewCard.frontText}
+                </Text>
                 {!showAnswer ? (
                   <TouchableOpacity
                     style={styles.showAnswerButton}
@@ -258,19 +281,33 @@ export default function FlashcardsScreen() {
                   </TouchableOpacity>
                 ) : (
                   <>
-                    <Text style={styles.reviewBack}>{currentReviewCard.backText}</Text>
-                    <Text style={styles.rateText}>How well did you remember?</Text>
+                    <Text style={styles.reviewBack}>
+                      {currentReviewCard.backText}
+                    </Text>
+                    <Text style={styles.rateText}>
+                      How well did you remember?
+                    </Text>
                     <View style={styles.qualityButtons}>
                       {QUALITY_LABELS.map((q) => (
                         <TouchableOpacity
                           key={q.value}
                           style={[
                             styles.qualityButton,
-                            { backgroundColor: q.color + '20', borderColor: q.color },
+                            {
+                              backgroundColor: q.color + '20',
+                              borderColor: q.color,
+                            },
                           ]}
-                          onPress={() => handleReviewCard(q.value as 0 | 1 | 2 | 3 | 4 | 5)}
+                          onPress={() =>
+                            handleReviewCard(q.value as 0 | 1 | 2 | 3 | 4 | 5)
+                          }
                         >
-                          <Text style={[styles.qualityButtonText, { color: q.color }]}>
+                          <Text
+                            style={[
+                              styles.qualityButtonText,
+                              { color: q.color },
+                            ]}
+                          >
                             {q.label}
                           </Text>
                         </TouchableOpacity>

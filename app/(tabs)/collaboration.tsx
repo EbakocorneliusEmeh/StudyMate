@@ -30,8 +30,12 @@ export default function CollaborationScreen() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteUserId, setInviteUserId] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>('viewer');
-  const [activeTab, setActiveTab] = useState<'collaborators' | 'invites' | 'shared'>('collaborators');
+  const [selectedRole, setSelectedRole] = useState<'editor' | 'viewer'>(
+    'viewer',
+  );
+  const [activeTab, setActiveTab] = useState<
+    'collaborators' | 'invites' | 'shared'
+  >('collaborators');
 
   useEffect(() => {
     loadData();
@@ -61,7 +65,11 @@ export default function CollaborationScreen() {
       return;
     }
     try {
-      await inviteCollaborator(sessionId.trim(), inviteUserId.trim(), selectedRole);
+      await inviteCollaborator(
+        sessionId.trim(),
+        inviteUserId.trim(),
+        selectedRole,
+      );
       Alert.alert('Success', 'Invitation sent!');
       setShowInviteModal(false);
       setInviteUserId('');
@@ -74,7 +82,7 @@ export default function CollaborationScreen() {
 
   const handleRespondToInvite = async (
     inviteSessionId: string,
-    status: 'accepted' | 'rejected'
+    status: 'accepted' | 'rejected',
   ) => {
     try {
       await respondToInvite(inviteSessionId, status);
@@ -105,7 +113,7 @@ export default function CollaborationScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -138,10 +146,18 @@ export default function CollaborationScreen() {
 
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'collaborators' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'collaborators' && styles.activeTab,
+          ]}
           onPress={() => setActiveTab('collaborators')}
         >
-          <Text style={[styles.tabText, activeTab === 'collaborators' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'collaborators' && styles.activeTabText,
+            ]}
+          >
             Team ({collaborators.length})
           </Text>
         </TouchableOpacity>
@@ -149,7 +165,12 @@ export default function CollaborationScreen() {
           style={[styles.tab, activeTab === 'invites' && styles.activeTab]}
           onPress={() => setActiveTab('invites')}
         >
-          <Text style={[styles.tabText, activeTab === 'invites' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'invites' && styles.activeTabText,
+            ]}
+          >
             Invites ({invites.length})
           </Text>
         </TouchableOpacity>
@@ -157,14 +178,19 @@ export default function CollaborationScreen() {
           style={[styles.tab, activeTab === 'shared' && styles.activeTab]}
           onPress={() => setActiveTab('shared')}
         >
-          <Text style={[styles.tabText, activeTab === 'shared' && styles.activeTabText]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'shared' && styles.activeTabText,
+            ]}
+          >
             Shared ({sharedWithMe.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'collaborators' && (
-        collaborators.length === 0 ? (
+      {activeTab === 'collaborators' &&
+        (collaborators.length === 0 ? (
           renderEmptyState('people-outline', 'No collaborators yet')
         ) : (
           <FlatList
@@ -176,24 +202,29 @@ export default function CollaborationScreen() {
                   <Ionicons name="person" size={20} color="#7f13ec" />
                 </View>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemTitle}>{item.name || item.userId}</Text>
+                  <Text style={styles.itemTitle}>
+                    {item.name || item.userId}
+                  </Text>
                   <Text style={styles.itemSubtitle}>{item.role}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => handleRemoveCollaborator(item.id)}
                 >
-                  <Ionicons name="remove-circle-outline" size={20} color="#ef4444" />
+                  <Ionicons
+                    name="remove-circle-outline"
+                    size={20}
+                    color="#ef4444"
+                  />
                 </TouchableOpacity>
               </View>
             )}
             contentContainerStyle={styles.listContent}
           />
-        )
-      )}
+        ))}
 
-      {activeTab === 'invites' && (
-        invites.length === 0 ? (
+      {activeTab === 'invites' &&
+        (invites.length === 0 ? (
           renderEmptyState('mail-outline', 'No pending invites')
         ) : (
           <FlatList
@@ -206,19 +237,25 @@ export default function CollaborationScreen() {
                 </View>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemTitle}>{item.sessionId}</Text>
-                  <Text style={styles.itemSubtitle}>{item.role} - {item.status}</Text>
+                  <Text style={styles.itemSubtitle}>
+                    {item.role} - {item.status}
+                  </Text>
                 </View>
                 {item.status === 'pending' && (
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.acceptButton]}
-                      onPress={() => handleRespondToInvite(item.sessionId, 'accepted')}
+                      onPress={() =>
+                        handleRespondToInvite(item.sessionId, 'accepted')
+                      }
                     >
                       <Ionicons name="checkmark" size={16} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.actionButton, styles.rejectButton]}
-                      onPress={() => handleRespondToInvite(item.sessionId, 'rejected')}
+                      onPress={() =>
+                        handleRespondToInvite(item.sessionId, 'rejected')
+                      }
                     >
                       <Ionicons name="close" size={16} color="#fff" />
                     </TouchableOpacity>
@@ -228,11 +265,10 @@ export default function CollaborationScreen() {
             )}
             contentContainerStyle={styles.listContent}
           />
-        )
-      )}
+        ))}
 
-      {activeTab === 'shared' && (
-        sharedWithMe.length === 0 ? (
+      {activeTab === 'shared' &&
+        (sharedWithMe.length === 0 ? (
           renderEmptyState('folder-outline', 'No sessions shared with you')
         ) : (
           <FlatList
@@ -244,7 +280,9 @@ export default function CollaborationScreen() {
                   <Ionicons name="folder" size={20} color="#7f13ec" />
                 </View>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemTitle}>{item.name || item.sessionId || 'Shared Session'}</Text>
+                  <Text style={styles.itemTitle}>
+                    {item.name || item.sessionId || 'Shared Session'}
+                  </Text>
                   <Text style={styles.itemSubtitle}>{item.role}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
@@ -252,8 +290,7 @@ export default function CollaborationScreen() {
             )}
             contentContainerStyle={styles.listContent}
           />
-        )
-      )}
+        ))}
 
       <Modal visible={showInviteModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
@@ -280,23 +317,42 @@ export default function CollaborationScreen() {
             <Text style={styles.roleLabel}>Select Role</Text>
             <View style={styles.roleOptions}>
               <TouchableOpacity
-                style={[styles.roleOption, selectedRole === 'viewer' && styles.roleOptionActive]}
+                style={[
+                  styles.roleOption,
+                  selectedRole === 'viewer' && styles.roleOptionActive,
+                ]}
                 onPress={() => setSelectedRole('viewer')}
               >
-                <Text style={[styles.roleOptionText, selectedRole === 'viewer' && styles.roleOptionTextActive]}>
+                <Text
+                  style={[
+                    styles.roleOptionText,
+                    selectedRole === 'viewer' && styles.roleOptionTextActive,
+                  ]}
+                >
                   Viewer
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.roleOption, selectedRole === 'editor' && styles.roleOptionActive]}
+                style={[
+                  styles.roleOption,
+                  selectedRole === 'editor' && styles.roleOptionActive,
+                ]}
                 onPress={() => setSelectedRole('editor')}
               >
-                <Text style={[styles.roleOptionText, selectedRole === 'editor' && styles.roleOptionTextActive]}>
+                <Text
+                  style={[
+                    styles.roleOptionText,
+                    selectedRole === 'editor' && styles.roleOptionTextActive,
+                  ]}
+                >
                   Editor
                 </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.submitButton} onPress={handleInvite}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleInvite}
+            >
               <Text style={styles.submitButtonText}>Send Invitation</Text>
             </TouchableOpacity>
           </View>

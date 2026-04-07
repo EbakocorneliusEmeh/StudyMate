@@ -14,7 +14,9 @@ export const inviteCollaborator = async (
   return response.data;
 };
 
-export const getCollaborators = async (sessionId: string): Promise<Collaborator[]> => {
+export const getCollaborators = async (
+  sessionId: string,
+): Promise<Collaborator[]> => {
   const response = await api.get(`/api/collaboration/session/${sessionId}`);
   return response.data;
 };
@@ -23,7 +25,9 @@ export const respondToInvite = async (
   sessionId: string,
   status: 'accepted' | 'rejected',
 ): Promise<{ message: string }> => {
-  const response = await api.patch(`/api/collaboration/invite/${sessionId}`, { status });
+  const response = await api.patch(`/api/collaboration/invite/${sessionId}`, {
+    status,
+  });
   return response.data;
 };
 
@@ -31,7 +35,9 @@ export const removeCollaborator = async (
   sessionId: string,
   collaboratorId: string,
 ): Promise<void> => {
-  await api.delete(`/api/collaboration/session/${sessionId}/collaborator/${collaboratorId}`);
+  await api.delete(
+    `/api/collaboration/session/${sessionId}/collaborator/${collaboratorId}`,
+  );
 };
 
 export const getSharedWithMe = async (): Promise<any[]> => {

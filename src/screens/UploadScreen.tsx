@@ -13,7 +13,9 @@ import { uploadFile } from '../services/api';
 export default function UploadScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ sessionId?: string }>();
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'success'>('idle');
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'success'>(
+    'idle',
+  );
 
   const pickAndUpload = async () => {
     try {
@@ -26,7 +28,7 @@ export default function UploadScreen() {
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ],
       });
-      
+
       if (!result.canceled) {
         setStatus('uploading');
         const asset = result.assets[0];
@@ -50,7 +52,7 @@ export default function UploadScreen() {
         }, 800);
       }
     } catch (_err) {
-      alert("Upload failed. Is the backend running?");
+      alert('Upload failed. Is the backend running?');
       setStatus('idle');
     }
   };

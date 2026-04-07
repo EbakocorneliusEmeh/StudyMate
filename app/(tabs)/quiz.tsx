@@ -182,7 +182,9 @@ export default function QuizScreen() {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{quizType === 'practice' ? '∞' : '5'}</Text>
+          <Text style={styles.statNumber}>
+            {quizType === 'practice' ? '∞' : '5'}
+          </Text>
           <Text style={styles.statLabel}>Questions</Text>
         </View>
       </View>
@@ -198,7 +200,9 @@ export default function QuizScreen() {
           </View>
           <View style={styles.quizTypeInfo}>
             <Text style={styles.quizTypeTitle}>Practice Mode</Text>
-            <Text style={styles.quizTypeDesc}>No time limit, learn at your pace</Text>
+            <Text style={styles.quizTypeDesc}>
+              No time limit, learn at your pace
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
         </TouchableOpacity>

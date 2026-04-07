@@ -1,10 +1,6 @@
 import axios from 'axios';
 import { getToken } from '../utils/storage';
-import {
-  AskQuestionOptions,
-  ChatResponse,
-  UploadResponse,
-} from '../types';
+import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
 
 const BASE_URL = 'http://192.168.1.172:3000';
 

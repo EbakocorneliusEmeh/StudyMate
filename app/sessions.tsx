@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(127,19,236,0.2)',
     padding: 2,
   },
+
   avatarPlaceholder: {
     width: '100%',
     height: '100%',

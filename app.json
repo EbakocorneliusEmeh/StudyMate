@@ -16,7 +16,9 @@
             "CFBundleTypeRole": "Editor",
             "CFBundleURLSchemes": ["studymobile"]
           }
-        ]
+        ],
+        "NSPhotoLibraryUsageDescription": "StudyMate needs access to your photo library to upload study materials.",
+        "NSPhotoLibraryAddUsageDescription": "StudyMate needs permission to save uploaded files to your photo library."
       }
     },
     "android": {
@@ -27,7 +29,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.studymobile"
+      "package": "com.anonymous.studymobile",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "output": "static",
@@ -47,7 +54,14 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "StudyMate needs access to your photo library to upload study materials.",
+          "savePhotosPermission": "StudyMate needs permission to save uploaded files."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

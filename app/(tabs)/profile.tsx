@@ -1,29 +1,50 @@
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { removeToken } from '../../src/utils/storage';
 import { getStats } from '../../src/api/progress';
+import { ProgressStats } from '../../src/types';
+import { removeToken } from '../../src/utils/storage';
 
 interface User {
-  name: string;
-  email: string;
+  name?: string;
+  full_name?: string;
+  fullName?: string;
+  email?: string;
 }
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<ProgressStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const getDisplayName = (value: User | null) => {
+    const explicitName =
+      value?.name?.trim() ||
+      value?.full_name?.trim() ||
+      value?.fullName?.trim();
+
+    if (explicitName) {
+      return explicitName;
+    }
+
+    const emailName = value?.email?.split('@')[0]?.trim();
+    if (emailName) {
+      return emailName;
+    }
+
+    return 'User';
+  };
 
   useEffect(() => {
     loadUserData();
@@ -70,7 +91,12 @@ export default function ProfileScreen() {
     );
   }
 
-  const menuItems = [
+  const menuItems: Array<{
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    label: string;
+    route?: string;
+    action?: () => void;
+  }> = [
     { icon: 'person-outline', label: 'Edit Profile', route: '/edit-profile' },
     { icon: 'settings-outline', label: 'Settings', action: () => {} },
     { icon: 'help-circle-outline', label: 'Help & Support', action: () => {} },
@@ -87,7 +113,7 @@ export default function ProfileScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person" size={40} color="#7f13ec" />
         </View>
-        <Text style={styles.userName}>{user?.name || 'User'}</Text>
+        <Text style={styles.userName}>{getDisplayName(user)}</Text>
         <Text style={styles.userEmail}>{user?.email || ''}</Text>
       </View>
 
@@ -114,14 +140,14 @@ export default function ProfileScreen() {
             key={index}
             style={styles.menuItem}
             onPress={() => {
-              if (item.route) {
-                router.push(item.route as any);
+              if (item.route === '/edit-profile') {
+                router.push('/edit-profile');
               } else if (item.action) {
                 item.action();
               }
             }}
           >
-            <Ionicons name={item.icon as any} size={24} color="#6b7280" />
+            <Ionicons name={item.icon} size={24} color="#6b7280" />
             <Text style={styles.menuLabel}>{item.label}</Text>
             <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
           </TouchableOpacity>

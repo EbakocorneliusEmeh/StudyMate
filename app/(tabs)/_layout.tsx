@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 
 export default function TabLayout() {
@@ -42,6 +42,7 @@ export default function TabLayout() {
         name="flashcards"
         options={{
           title: 'Flashcards',
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color }) => (
             <Ionicons name="layers-outline" size={24} color={color} />
           ),

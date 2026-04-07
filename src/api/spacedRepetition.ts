@@ -22,12 +22,18 @@ export const getCard = async (id: string): Promise<Card> => {
   return response.data;
 };
 
-export const updateCard = async (id: string, input: Partial<CardCreateInput>): Promise<Card> => {
+export const updateCard = async (
+  id: string,
+  input: Partial<CardCreateInput>,
+): Promise<Card> => {
   const response = await api.patch(`/api/cards/${id}`, input);
   return response.data;
 };
 
-export const reviewCard = async (id: string, input: CardReviewInput): Promise<Card> => {
+export const reviewCard = async (
+  id: string,
+  input: CardReviewInput,
+): Promise<Card> => {
   const response = await api.post(`/api/cards/${id}/review`, input);
   return response.data;
 };

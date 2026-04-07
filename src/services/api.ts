@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { getToken } from '../utils/storage';
 import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
+import { getToken } from '../utils/storage';
 
-const BASE_URL = 'http://192.168.1.172:3000';
+const BASE_URL = 'http://192.168.1.169:3000';
 
 // ASK GEMINI
 export const askQuestion = async (
@@ -60,14 +60,21 @@ export const uploadFile = async (
 
   return {
     message: response.data.message,
-    documentId: response.data.documentId || response.data.id,
+    documentId:
+      response.data.documentId || response.data.document_id || response.data.id,
     url: response.data.url || response.data.file_url,
     fileName: response.data.fileName || response.data.file_name || name,
     fileType: response.data.fileType || response.data.file_type || type,
+    status: response.data.status,
+    sourceText: response.data.sourceText || response.data.source_text || null,
+    geminiFileUri:
+      response.data.geminiFileUri || response.data.gemini_file_uri || null,
+    errorMessage:
+      response.data.errorMessage || response.data.error_message || null,
   };
 };
 
 // Re-export from api modules for convenience
-export * from '../api/spacedRepetition';
 export * from '../api/collaboration';
 export * from '../api/progress';
+export * from '../api/spacedRepetition';

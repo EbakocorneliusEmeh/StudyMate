@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import { DocumentSourceRecord, GeneratedQuiz } from '../types';
+
+const AUTH_TOKEN_KEY = 'authToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
+const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
+const DOCUMENT_SOURCES_KEY = 'documentSources';
+
+const BACKEND_URL = 'http://172.20.10.5:3000';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
@@ -93,4 +101,89 @@ export const removeToken = async () => {
   } catch (error) {
     console.error('Failed to remove token:', error);
   }
+};
+
+const readJson = async <T>(key: string, fallback: T): Promise<T> => {
+  try {
+    const value = await AsyncStorage.getItem(key);
+    if (!value) {
+      return fallback;
+    }
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.error(`Failed to read ${key}:`, error);
+    return fallback;
+  }
+};
+
+const writeJson = async <T>(key: string, value: T) => {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to write ${key}:`, error);
+    throw error;
+  }
+};
+
+export const getGeneratedQuizzes = async (): Promise<GeneratedQuiz[]> =>
+  readJson<GeneratedQuiz[]>(GENERATED_QUIZZES_KEY, []);
+
+export const saveGeneratedQuiz = async (quiz: GeneratedQuiz) => {
+  const quizzes = await getGeneratedQuizzes();
+  const nextQuizzes = [quiz, ...quizzes.filter((item) => item.id !== quiz.id)];
+  await writeJson(GENERATED_QUIZZES_KEY, nextQuizzes);
+};
+
+export const getGeneratedQuizById = async (
+  quizId: string,
+): Promise<GeneratedQuiz | null> => {
+  const quizzes = await getGeneratedQuizzes();
+  return quizzes.find((quiz) => quiz.id === quizId) ?? null;
+};
+
+export const getDocumentSources = async (): Promise<DocumentSourceRecord[]> =>
+  readJson<DocumentSourceRecord[]>(DOCUMENT_SOURCES_KEY, []);
+
+export const upsertDocumentSource = async (source: DocumentSourceRecord) => {
+  const sources = await getDocumentSources();
+  const nextSources = [
+    source,
+    ...sources.filter((item) => item.id !== source.id),
+  ];
+  await writeJson(DOCUMENT_SOURCES_KEY, nextSources);
+};
+
+export const findDocumentSource = async (params: {
+  fileName?: string;
+  fileId?: string;
+  fileUrl?: string;
+  documentId?: string;
+  sessionId?: string;
+}) => {
+  const sources = await getDocumentSources();
+  const { fileName, fileId, fileUrl, documentId, sessionId } = params;
+
+  return (
+    sources.find((source) => {
+      if (fileId && source.fileId === fileId) {
+        return true;
+      }
+
+      if (fileUrl && source.fileUrl === fileUrl) {
+        return true;
+      }
+
+      if (documentId && source.documentId === documentId) {
+        return true;
+      }
+
+      if (fileName && source.fileName === fileName) {
+        if (!sessionId || !source.sessionId || source.sessionId === sessionId) {
+          return true;
+        }
+      }
+
+      return false;
+    }) ?? null
+  );
 };

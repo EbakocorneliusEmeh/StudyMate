@@ -52,7 +52,11 @@ export default function ProgressScreen() {
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7f13ec']} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#7f13ec']}
+        />
       }
     >
       <View style={styles.header}>
@@ -70,7 +74,9 @@ export default function ProgressScreen() {
         </View>
         <View style={styles.streakDivider} />
         <View style={styles.streakItem}>
-          <Text style={styles.streakItemNumber}>{stats?.longestStreak || 0}</Text>
+          <Text style={styles.streakItemNumber}>
+            {stats?.longestStreak || 0}
+          </Text>
           <Text style={styles.streakItemLabel}>Best</Text>
         </View>
       </View>
@@ -88,7 +94,9 @@ export default function ProgressScreen() {
         </View>
         <View style={styles.statCard}>
           <Ionicons name="time" size={24} color="#22c55e" />
-          <Text style={styles.statCardNumber}>{stats?.totalStudyTimeMinutes || 0}</Text>
+          <Text style={styles.statCardNumber}>
+            {stats?.totalStudyTimeMinutes || 0}
+          </Text>
           <Text style={styles.statCardLabel}>Minutes</Text>
         </View>
         <View style={styles.statCard}>
@@ -102,15 +110,21 @@ export default function ProgressScreen() {
         <Text style={styles.sectionTitle}>Today's Stats</Text>
         <View style={styles.todayStats}>
           <View style={styles.todayStatItem}>
-            <Text style={styles.todayStatNumber}>{stats?.cardsDueToday || 0}</Text>
+            <Text style={styles.todayStatNumber}>
+              {stats?.cardsDueToday || 0}
+            </Text>
             <Text style={styles.todayStatLabel}>Cards Due</Text>
           </View>
           <View style={styles.todayStatItem}>
-            <Text style={styles.todayStatNumber}>{stats?.cardsReviewedThisWeek || 0}</Text>
+            <Text style={styles.todayStatNumber}>
+              {stats?.cardsReviewedThisWeek || 0}
+            </Text>
             <Text style={styles.todayStatLabel}>Reviewed This Week</Text>
           </View>
           <View style={styles.todayStatItem}>
-            <Text style={styles.todayStatNumber}>{stats?.averageSessionLength || 0}</Text>
+            <Text style={styles.todayStatNumber}>
+              {stats?.averageSessionLength || 0}
+            </Text>
             <Text style={styles.todayStatLabel}>Avg Session (min)</Text>
           </View>
         </View>
@@ -120,23 +134,36 @@ export default function ProgressScreen() {
         <Text style={styles.sectionTitle}>Weekly Progress</Text>
         {stats?.weeklyProgress && stats.weeklyProgress.length > 0 ? (
           <View style={styles.weeklyChart}>
-            {stats.weeklyProgress.slice(-7).map((day: WeeklyProgress, index: number) => {
-              const maxMinutes = Math.max(...stats.weeklyProgress.map(d => d.studyTimeMinutes), 1);
-              const height = (day.studyTimeMinutes / maxMinutes) * 100;
-              return (
-                <View key={index} style={styles.chartBarContainer}>
-                  <Text style={styles.chartValue}>{day.studyTimeMinutes}</Text>
-                  <View style={[styles.chartBar, { height: Math.max(height, 4) }]} />
-                  <Text style={styles.chartDate}>
-                    {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })}
-                  </Text>
-                </View>
-              );
-            })}
+            {stats.weeklyProgress
+              .slice(-7)
+              .map((day: WeeklyProgress, index: number) => {
+                const maxMinutes = Math.max(
+                  ...stats.weeklyProgress.map((d) => d.studyTimeMinutes),
+                  1,
+                );
+                const height = (day.studyTimeMinutes / maxMinutes) * 100;
+                return (
+                  <View key={index} style={styles.chartBarContainer}>
+                    <Text style={styles.chartValue}>
+                      {day.studyTimeMinutes}
+                    </Text>
+                    <View
+                      style={[styles.chartBar, { height: Math.max(height, 4) }]}
+                    />
+                    <Text style={styles.chartDate}>
+                      {new Date(day.date).toLocaleDateString('en', {
+                        weekday: 'short',
+                      })}
+                    </Text>
+                  </View>
+                );
+              })}
           </View>
         ) : (
           <View style={styles.emptyChart}>
-            <Text style={styles.emptyChartText}>No study data yet. Start studying!</Text>
+            <Text style={styles.emptyChartText}>
+              No study data yet. Start studying!
+            </Text>
           </View>
         )}
       </View>

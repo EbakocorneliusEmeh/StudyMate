@@ -20,7 +20,11 @@ import {
   SessionFile,
   StudySession,
 } from '../../src/api/sessions';
-import { getCards, createCard, reviewCard } from '../../src/api/spacedRepetition';
+import {
+  getCards,
+  createCard,
+  reviewCard,
+} from '../../src/api/spacedRepetition';
 import { Card, CardCreateInput, CardReviewInput } from '../../src/types';
 import { FileUploader } from '../../components/FileUploader';
 
@@ -34,7 +38,7 @@ export default function SessionDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFilesLoading, setIsFilesLoading] = useState(false);
   const [showFileUploader, setShowFileUploader] = useState(false);
-  
+
   // Flashcards state
   const [cards, setCards] = useState<Card[]>([]);
   const [isCardsLoading, setIsCardsLoading] = useState(false);
@@ -149,9 +153,9 @@ export default function SessionDetailScreen() {
     try {
       const input: CardReviewInput = { quality };
       await reviewCard(cards[currentCardIndex].id, input);
-      
+
       if (currentCardIndex < cards.length - 1) {
-        setCurrentCardIndex(prev => prev + 1);
+        setCurrentCardIndex((prev) => prev + 1);
         setShowAnswer(false);
       } else {
         Alert.alert('Done!', 'You reviewed all cards!');
@@ -298,7 +302,7 @@ export default function SessionDetailScreen() {
 
         <View style={styles.flashcardsSection}>
           <Text style={styles.sectionTitle}>Flashcards</Text>
-          
+
           {isCardsLoading ? (
             <View style={styles.emptyFilesContainer}>
               <ActivityIndicator size="small" color="#7f13ec" />
@@ -314,9 +318,7 @@ export default function SessionDetailScreen() {
           ) : (
             <View style={styles.emptyFilesContainer}>
               <Ionicons name="layers-outline" size={40} color="#cbd5e1" />
-              <Text style={styles.emptyFilesText}>
-                No flashcards yet
-              </Text>
+              <Text style={styles.emptyFilesText}>No flashcards yet</Text>
             </View>
           )}
 
@@ -338,7 +340,9 @@ export default function SessionDetailScreen() {
                 }}
               >
                 <Ionicons name="school-outline" size={20} color="#ffffff" />
-                <Text style={styles.reviewButtonText}>Review ({cards.length})</Text>
+                <Text style={styles.reviewButtonText}>
+                  Review ({cards.length})
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -375,7 +379,14 @@ export default function SessionDetailScreen() {
       <Modal visible={showCreateCard} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
               <Text style={styles.modalTitle}>Create Flashcard</Text>
               <TouchableOpacity onPress={() => setShowCreateCard(false)}>
                 <Ionicons name="close" size={24} color="#374151" />
@@ -397,16 +408,36 @@ export default function SessionDetailScreen() {
             />
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               <TouchableOpacity
-                style={{ flex: 1, padding: 16, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' }}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  borderRadius: 12,
+                  backgroundColor: '#f3f4f6',
+                  alignItems: 'center',
+                }}
                 onPress={() => setShowCreateCard(false)}
               >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#6b7280' }}>Cancel</Text>
+                <Text
+                  style={{ fontSize: 16, fontWeight: '600', color: '#6b7280' }}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flex: 1, padding: 16, borderRadius: 12, backgroundColor: '#7f13ec', alignItems: 'center' }}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  borderRadius: 12,
+                  backgroundColor: '#7f13ec',
+                  alignItems: 'center',
+                }}
                 onPress={handleCreateCard}
               >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#ffffff' }}>Create</Text>
+                <Text
+                  style={{ fontSize: 16, fontWeight: '600', color: '#ffffff' }}
+                >
+                  Create
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -416,54 +447,174 @@ export default function SessionDetailScreen() {
       <Modal visible={showReviewCards} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={styles.modalTitle}>Review ({currentCardIndex + 1}/{cards.length})</Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={styles.modalTitle}>
+                Review ({currentCardIndex + 1}/{cards.length})
+              </Text>
               <TouchableOpacity onPress={() => setShowReviewCards(false)}>
                 <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
             </View>
             {cards.length > 0 && (
               <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1f2937', textAlign: 'center', marginBottom: 24 }}>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                    color: '#1f2937',
+                    textAlign: 'center',
+                    marginBottom: 24,
+                  }}
+                >
                   {cards[currentCardIndex]?.frontText}
                 </Text>
                 {!showAnswer ? (
                   <TouchableOpacity
-                    style={{ backgroundColor: '#7f13ec', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12 }}
+                    style={{
+                      backgroundColor: '#7f13ec',
+                      paddingHorizontal: 32,
+                      paddingVertical: 16,
+                      borderRadius: 12,
+                    }}
                     onPress={() => setShowAnswer(true)}
                   >
-                    <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Show Answer</Text>
+                    <Text
+                      style={{
+                        color: '#ffffff',
+                        fontSize: 16,
+                        fontWeight: '600',
+                      }}
+                    >
+                      Show Answer
+                    </Text>
                   </TouchableOpacity>
                 ) : (
                   <>
-                    <Text style={{ fontSize: 18, color: '#374151', textAlign: 'center', marginBottom: 24 }}>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        color: '#374151',
+                        textAlign: 'center',
+                        marginBottom: 24,
+                      }}
+                    >
                       {cards[currentCardIndex]?.backText}
                     </Text>
-                    <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>How well did you remember?</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: '#6b7280',
+                        marginBottom: 16,
+                      }}
+                    >
+                      How well did you remember?
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: 8,
+                      }}
+                    >
                       <TouchableOpacity
-                        style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 2, minWidth: 60, alignItems: 'center', backgroundColor: '#fee2e2', borderColor: '#ef4444' }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 2,
+                          minWidth: 60,
+                          alignItems: 'center',
+                          backgroundColor: '#fee2e2',
+                          borderColor: '#ef4444',
+                        }}
                         onPress={() => handleReviewCard(0)}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#ef4444' }}>Forgot</Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: '600',
+                            color: '#ef4444',
+                          }}
+                        >
+                          Forgot
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 2, minWidth: 60, alignItems: 'center', backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 2,
+                          minWidth: 60,
+                          alignItems: 'center',
+                          backgroundColor: '#fef3c7',
+                          borderColor: '#f59e0b',
+                        }}
                         onPress={() => handleReviewCard(3)}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#f59e0b' }}>Hard</Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: '600',
+                            color: '#f59e0b',
+                          }}
+                        >
+                          Hard
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 2, minWidth: 60, alignItems: 'center', backgroundColor: '#dcfce7', borderColor: '#22c55e' }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 2,
+                          minWidth: 60,
+                          alignItems: 'center',
+                          backgroundColor: '#dcfce7',
+                          borderColor: '#22c55e',
+                        }}
                         onPress={() => handleReviewCard(4)}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#22c55e' }}>Good</Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: '600',
+                            color: '#22c55e',
+                          }}
+                        >
+                          Good
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 2, minWidth: 60, alignItems: 'center', backgroundColor: '#ede9fe', borderColor: '#7c3aed' }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 2,
+                          minWidth: 60,
+                          alignItems: 'center',
+                          backgroundColor: '#ede9fe',
+                          borderColor: '#7c3aed',
+                        }}
                         onPress={() => handleReviewCard(5)}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#7c3aed' }}>Perfect</Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: '600',
+                            color: '#7c3aed',
+                          }}
+                        >
+                          Perfect
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </>

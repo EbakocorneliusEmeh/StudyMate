@@ -355,7 +355,7 @@
 
 import { getToken, refreshAccessToken } from '../utils/storage';
 
-const BACKEND_URL = 'http://192.168.1.169:3000';
+const BACKEND_URL = 'http://172.20.10.5:3000';
 
 export interface StudySession {
   id: string;

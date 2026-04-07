@@ -9,6 +9,11 @@ const DOCUMENT_SOURCES_KEY = 'documentSources';
 
 const BACKEND_URL = 'http://172.20.10.5:3000';
 
+const AUTH_TOKEN_KEY = 'authToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
+
+const BACKEND_URL = 'http://172.20.10.5:3000';
+
 export const storeToken = async (token: string) => {
   try {
     await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);

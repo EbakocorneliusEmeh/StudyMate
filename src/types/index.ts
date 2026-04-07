@@ -22,24 +22,6 @@ export interface UploadResponse {
   url: string;
   fileName?: string;
   fileType?: string;
-  status?: 'processing' | 'ready' | 'failed';
-  sourceText?: string | null;
-  geminiFileUri?: string | null;
-  errorMessage?: string | null;
-}
-
-export interface DocumentStatusResponse {
-  document_id: string;
-  file_name: string;
-  file_url: string;
-  file_type: string;
-  file_size: number;
-  status: 'processing' | 'ready' | 'failed';
-  source_text?: string | null;
-  gemini_file_uri?: string | null;
-  error_message?: string | null;
-  updated_at: string;
-  created_at: string;
 }
 
 export interface AskQuestionOptions {
@@ -47,45 +29,6 @@ export interface AskQuestionOptions {
   sessionId?: string;
   fileName?: string;
   fileUrl?: string;
-}
-
-export interface QuizQuestionOption {
-  id: string;
-  text: string;
-}
-
-export interface GeneratedQuizQuestion {
-  id: string;
-  question: string;
-  options: QuizQuestionOption[];
-  correct_answer: string;
-  explanation: string;
-}
-
-export interface GeneratedQuiz {
-  id: string;
-  title: string;
-  fileName: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  numQuestions: number;
-  sessionId?: string;
-  sourcePreview?: string;
-  createdAt: string;
-  questions: GeneratedQuizQuestion[];
-}
-
-export interface DocumentSourceRecord {
-  id: string;
-  sessionId?: string;
-  fileId?: string;
-  documentId?: string;
-  fileName: string;
-  fileUrl?: string;
-  sourceText?: string;
-  geminiFileUri?: string;
-  mimeType?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Card {

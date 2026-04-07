@@ -1,369 +1,531 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  Alert,
+  FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  createCard,
+  getCards,
+  getDueCards,
+  reviewCard,
+  deleteCard,
+} from '../../src/api/spacedRepetition';
+import { Card, CardCreateInput, CardReviewInput } from '../../src/types';
 
-const FlashcardsScreen = () => {
-  const recentUploads = [
-    {
-      id: 1,
-      name: 'Cell_Biology_Lec_04.pdf',
-      uploaded: 'Uploaded 2 hours ago',
-      type: 'pdf',
-      active: false,
-    },
-    {
-      id: 2,
-      name: 'History_Modern_Era.docx',
-      uploaded: 'Active Note • 42 Cards',
-      type: 'docx',
-      active: true,
-    },
-  ];
+const QUALITY_LABELS = [
+  { value: 0, label: 'Forgot', color: '#ef4444' },
+  { value: 1, label: 'Wrong', color: '#f97316' },
+  { value: 2, label: 'Hard', color: '#eab308' },
+  { value: 3, label: 'Good', color: '#22c55e' },
+  { value: 4, label: 'Easy', color: '#3b82f6' },
+  { value: 5, label: 'Perfect', color: '#7c3aed' },
+];
 
-  const generatedCards = [
-    {
-      id: 1,
-      question: 'What were the primary causes of World War I?',
-      answerPreview: 'Tap to reveal the full answer...',
-    },
-  ];
+export default function FlashcardsScreen() {
+  const [cards, setCards] = useState<Card[]>([]);
+  const [dueCards, setDueCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [currentReviewCard, setCurrentReviewCard] = useState<Card | null>(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [frontText, setFrontText] = useState('');
+  const [backText, setBackText] = useState('');
+  const [sessionId, setSessionId] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'due'>('all');
+
+  useEffect(() => {
+    loadCards();
+  }, []);
+
+  const loadCards = async () => {
+    try {
+      setLoading(true);
+      const allCards = await getCards();
+      setCards(allCards);
+      const due = await getDueCards();
+      setDueCards(due);
+    } catch (error) {
+      console.error('Error loading cards:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCard = async () => {
+    if (!frontText.trim() || !backText.trim()) {
+      Alert.alert('Error', 'Please fill in both front and back text');
+      return;
+    }
+    try {
+      const input: CardCreateInput = {
+        frontText: frontText.trim(),
+        backText: backText.trim(),
+      };
+      if (sessionId.trim()) {
+        input.sessionId = sessionId.trim();
+      }
+      await createCard(input);
+      setShowCreateModal(false);
+      setFrontText('');
+      setBackText('');
+      setSessionId('');
+      loadCards();
+      Alert.alert('Success', 'Card created successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create card');
+    }
+  };
+
+  const handleReviewCard = async (quality: 0 | 1 | 2 | 3 | 4 | 5) => {
+    if (!currentReviewCard) return;
+    try {
+      const input: CardReviewInput = { quality };
+      await reviewCard(currentReviewCard.id, input);
+      setShowAnswer(false);
+      setCurrentReviewCard(null);
+      setShowReviewModal(false);
+      loadCards();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit review');
+    }
+  };
+
+  const handleDeleteCard = async (id: string) => {
+    Alert.alert('Delete Card', 'Are you sure you want to delete this card?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCard(id);
+            loadCards();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete card');
+          }
+        },
+      },
+    ]);
+  };
+
+  const startReview = (card: Card) => {
+    setCurrentReviewCard(card);
+    setShowAnswer(false);
+    setShowReviewModal(true);
+  };
+
+  const displayedCards = activeTab === 'due' ? dueCards : cards;
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#7f13ec" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Ionicons name="arrow-back" size={24} color="#8A2BE2" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Generate Flashcards</Text>
-        <TouchableOpacity>
-          <View style={styles.infoIcon}>
-            <Ionicons name="information-circle" size={24} color="#FFFFFF" />
-          </View>
+        <Text style={styles.headerTitle}>Flashcards</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {/* Upload Section */}
-        <View style={styles.uploadSection}>
-          <View style={styles.uploadIcon}>
-            <Ionicons name="cloud-upload" size={48} color="#FFFFFF" />
-          </View>
-          <Text style={styles.uploadTitle}>Upload Files</Text>
-          <Text style={styles.uploadSubtitle}>
-            PDF, Doc, or images of your notes
-          </Text>
-          <TouchableOpacity style={styles.selectButton}>
-            <Text style={styles.selectButtonText}>Select Files</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Uploads */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Uploads</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAll}>View all</Text>
-          </TouchableOpacity>
-        </View>
-        {recentUploads.map((upload) => (
-          <View
-            key={upload.id}
-            style={[styles.uploadCard, upload.active && styles.activeCard]}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          onPress={() => setActiveTab('all')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'all' && styles.activeTabText,
+            ]}
           >
-            <Ionicons
-              name={upload.type === 'pdf' ? 'document' : 'document-text'}
-              size={24}
-              color="#8A2BE2"
-            />
-            <View style={styles.uploadInfo}>
-              <Text style={styles.uploadName}>{upload.name}</Text>
-              <Text
-                style={[styles.uploadMeta, upload.active && styles.activeMeta]}
-              >
-                {upload.uploaded}
-              </Text>
-            </View>
-            {upload.active ? (
-              <View style={styles.checkIcon}>
-                <Ionicons name="checkmark-circle" size={24} color="#8A2BE2" />
+            All ({cards.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'due' && styles.activeTab]}
+          onPress={() => setActiveTab('due')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'due' && styles.activeTabText,
+            ]}
+          >
+            Due ({dueCards.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {displayedCards.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="layers-outline" size={64} color="#d1d5db" />
+          <Text style={styles.emptyText}>
+            {activeTab === 'due'
+              ? 'No cards due for review!'
+              : 'No flashcards yet'}
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => setShowCreateModal(true)}
+          >
+            <Text style={styles.emptyButtonText}>Create Your First Card</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={displayedCards}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.cardItem}
+              onPress={() => startReview(item)}
+              onLongPress={() => handleDeleteCard(item.id)}
+            >
+              <View style={styles.cardContent}>
+                <Text style={styles.cardFront} numberOfLines={2}>
+                  {item.frontText}
+                </Text>
+                <Text style={styles.cardBack} numberOfLines={1}>
+                  {item.backText}
+                </Text>
               </View>
-            ) : (
-              <TouchableOpacity>
-                <Ionicons name="ellipsis-vertical" size={24} color="#666" />
+              {item.nextReviewDate && (
+                <Text style={styles.cardDue}>
+                  Due: {new Date(item.nextReviewDate).toLocaleDateString()}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
+
+      <Modal visible={showCreateModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Flashcard</Text>
+              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                <Ionicons name="close" size={24} color="#374151" />
               </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Front (Question)"
+              value={frontText}
+              onChangeText={setFrontText}
+              multiline
+            />
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Back (Answer)"
+              value={backText}
+              onChangeText={setBackText}
+              multiline
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Session ID (optional)"
+              value={sessionId}
+              onChangeText={setSessionId}
+            />
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleCreateCard}
+            >
+              <Text style={styles.submitButtonText}>Create Card</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showReviewModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Review Card</Text>
+              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            {currentReviewCard && (
+              <View style={styles.reviewCard}>
+                <Text style={styles.reviewFront}>
+                  {currentReviewCard.frontText}
+                </Text>
+                {!showAnswer ? (
+                  <TouchableOpacity
+                    style={styles.showAnswerButton}
+                    onPress={() => setShowAnswer(true)}
+                  >
+                    <Text style={styles.showAnswerText}>Show Answer</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    <Text style={styles.reviewBack}>
+                      {currentReviewCard.backText}
+                    </Text>
+                    <Text style={styles.rateText}>
+                      How well did you remember?
+                    </Text>
+                    <View style={styles.qualityButtons}>
+                      {QUALITY_LABELS.map((q) => (
+                        <TouchableOpacity
+                          key={q.value}
+                          style={[
+                            styles.qualityButton,
+                            {
+                              backgroundColor: q.color + '20',
+                              borderColor: q.color,
+                            },
+                          ]}
+                          onPress={() =>
+                            handleReviewCard(q.value as 0 | 1 | 2 | 3 | 4 | 5)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.qualityButtonText,
+                              { color: q.color },
+                            ]}
+                          >
+                            {q.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
             )}
           </View>
-        ))}
-
-        {/* Generated Flashcards */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Generated Flashcards</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>42 Flashcards</Text>
-          </View>
         </View>
-        {generatedCards.map((card) => (
-          <View key={card.id} style={styles.cardPreview}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardLabel}>QUESTION</Text>
-              <TouchableOpacity>
-                <Ionicons name="pencil" size={16} color="#CCC" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.question}>{card.question}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.answerLabel}>ANSWER PREVIEW</Text>
-              <Text style={styles.answerPreview}>{card.answerPreview}</Text>
-            </View>
-          </View>
-        ))}
-        <TouchableOpacity style={styles.manualButton}>
-          <Ionicons name="add" size={24} color="#8A2BE2" />
-          <Text style={styles.manualText}>Create Manual Card</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.startButton}>
-          <View style={styles.playIcon}>
-            <Ionicons name="play" size={24} color="#FFFFFF" />
-          </View>
-          <Text style={styles.startText}>Start Flashcard Session</Text>
-        </TouchableOpacity>
-      </View>
+      </Modal>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#1f2937',
   },
-  infoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#8A2BE2',
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#7f13ec',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  uploadSection: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#D8BFD8', // light purple
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  uploadIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#8A2BE2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  uploadTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
-  },
-  uploadSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
-  },
-  selectButton: {
-    backgroundColor: '#8A2BE2',
-    borderRadius: 20,
-    paddingHorizontal: 32,
+  tabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
     paddingVertical: 12,
+    backgroundColor: '#fff',
+    gap: 12,
   },
-  selectButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  viewAll: {
-    color: '#8A2BE2',
-    fontSize: 14,
-  },
-  uploadCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
+  activeTab: {
+    backgroundColor: '#7f13ec',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  listContent: {
+    padding: 16,
+  },
+  cardItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-  },
-  activeCard: {
-    borderWidth: 3,
-    borderColor: '#8A2BE2',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  uploadInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  uploadName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  uploadMeta: {
-    fontSize: 14,
-    color: '#666',
-  },
-  activeMeta: {
-    color: '#8A2BE2',
-  },
-  checkIcon: {
-    // already has the icon
-  },
-  badge: {
-    backgroundColor: '#F0E6FF', // light purple
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    color: '#8A2BE2',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  cardPreview: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  cardContent: {
     marginBottom: 8,
   },
-  cardLabel: {
-    fontSize: 12,
-    color: '#8A2BE2',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  question: {
+  cardFront: {
     fontSize: 16,
-    color: '#000',
-    marginBottom: 12,
-  },
-  cardFooter: {
-    marginTop: 12,
-  },
-  answerLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    fontWeight: '600',
+    color: '#1f2937',
     marginBottom: 4,
   },
-  answerPreview: {
+  cardBack: {
     fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
+    color: '#6b7280',
   },
-  manualButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cardDue: {
+    fontSize: 12,
+    color: '#7f13ec',
+  },
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#D8BFD8',
-    borderRadius: 20,
+    alignItems: 'center',
+    paddingBottom: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  emptyButton: {
+    backgroundColor: '#7f13ec',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  input: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
     padding: 16,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  inputMultiline: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    backgroundColor: '#7f13ec',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    alignItems: 'center',
+  },
+  reviewFront: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  showAnswerButton: {
+    backgroundColor: '#7f13ec',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  showAnswerText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reviewBack: {
+    fontSize: 18,
+    color: '#374151',
+    textAlign: 'center',
+    marginTop: 16,
     marginBottom: 24,
   },
-  manualText: {
-    color: '#8A2BE2',
-    fontSize: 16,
-    marginLeft: 8,
+  rateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
   },
-  footer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  startButton: {
+  qualityButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    backgroundColor: '#8A2BE2',
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 5,
+    gap: 8,
   },
-  playIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  qualityButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
   },
-  startText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+  qualityButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
-
-export default FlashcardsScreen;

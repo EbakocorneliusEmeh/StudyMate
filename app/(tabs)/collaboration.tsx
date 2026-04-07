@@ -1,30 +1,31 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
+  inviteCollaborator,
   getCollaborators,
   getPendingInvites,
-  getSharedWithMe,
-  inviteCollaborator,
-  removeCollaborator,
   respondToInvite,
+  getSharedWithMe,
+  removeCollaborator,
 } from '../../src/api/collaboration';
-import { CollaborationInvite, Collaborator } from '../../src/types';
+import { Collaborator, CollaborationInvite } from '../../src/types';
 
 export default function CollaborationScreen() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [invites, setInvites] = useState<CollaborationInvite[]>([]);
-  const [sharedWithMe, setSharedWithMe] = useState<Collaborator[]>([]);
+  const [sharedWithMe, setSharedWithMe] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteUserId, setInviteUserId] = useState('');
@@ -51,8 +52,8 @@ export default function CollaborationScreen() {
       setCollaborators(collab);
       setInvites(pendingInvites);
       setSharedWithMe(shared);
-    } catch (_error) {
-      console.error('Error loading collaboration data:', _error);
+    } catch (error) {
+      console.error('Error loading collaboration data:', error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function CollaborationScreen() {
       setInviteUserId('');
       setSessionId('');
       loadData();
-    } catch (_error) {
+    } catch (error) {
       Alert.alert('Error', 'Failed to send invitation');
     }
   };
@@ -87,7 +88,7 @@ export default function CollaborationScreen() {
       await respondToInvite(inviteSessionId, status);
       Alert.alert('Success', `Invite ${status}!`);
       loadData();
-    } catch (_error) {
+    } catch (error) {
       Alert.alert('Error', `Failed to ${status} invite`);
     }
   };
@@ -107,7 +108,7 @@ export default function CollaborationScreen() {
                 await removeCollaborator(sessionId, collabId);
                 loadData();
               }
-            } catch (_error) {
+            } catch (error) {
               Alert.alert('Error', 'Failed to remove collaborator');
             }
           },
@@ -116,12 +117,9 @@ export default function CollaborationScreen() {
     );
   };
 
-  const renderEmptyState = (
-    icon: React.ComponentProps<typeof Ionicons>['name'],
-    text: string,
-  ) => (
+  const renderEmptyState = (icon: string, text: string) => (
     <View style={styles.emptyContainer}>
-      <Ionicons name={icon} size={64} color="#d1d5db" />
+      <Ionicons name={icon as any} size={64} color="#d1d5db" />
       <Text style={styles.emptyText}>{text}</Text>
     </View>
   );

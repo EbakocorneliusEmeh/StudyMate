@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { linkFileToSession } from '../src/api/sessions';
 import {
   ApiError,
   deleteFile,
@@ -22,10 +21,7 @@ import {
   uploadFile,
   validateFile,
 } from '../src/api/upload';
-import {
-  persistUploadedDocumentSource,
-  waitForDocumentSource,
-} from '../src/utils/documentSources';
+import { linkFileToSession } from '../src/api/sessions';
 
 interface Session {
   id: string;
@@ -184,7 +180,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
-      input.onchange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
         if (file) {
           const fileInfo = {
@@ -318,26 +314,6 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           uploadResult.file_type,
           uploadResult.file_size,
         );
-      }
-
-      await persistUploadedDocumentSource({
-        uploadedFile: uploadResult,
-        sessionId: selectedSessionId,
-        localUri:
-          typeof selectedFile.uri === 'string' ? selectedFile.uri : undefined,
-      });
-
-      if (
-        uploadResult.document_id &&
-        !uploadResult.source_text &&
-        uploadResult.status === 'processing'
-      ) {
-        await waitForDocumentSource({
-          documentId: uploadResult.document_id,
-          sessionId: selectedSessionId,
-          fileName: uploadResult.file_name,
-          fileUrl: uploadResult.file_url,
-        });
       }
 
       clearInterval(progressInterval);

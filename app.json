@@ -16,9 +16,7 @@
             "CFBundleTypeRole": "Editor",
             "CFBundleURLSchemes": ["studymobile"]
           }
-        ],
-        "NSPhotoLibraryUsageDescription": "StudyMate needs access to your photo library to upload study materials.",
-        "NSPhotoLibraryAddUsageDescription": "StudyMate needs permission to save uploaded files to your photo library."
+        ]
       }
     },
     "android": {
@@ -54,14 +52,7 @@
           }
         }
       ],
-      "expo-web-browser",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "StudyMate needs access to your photo library to upload study materials.",
-          "savePhotosPermission": "StudyMate needs permission to save uploaded files."
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -14,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FileUploader } from '../../components/FileUploader';
 import {
   getSession,
   getSessionFiles,
@@ -22,13 +21,12 @@ import {
   StudySession,
 } from '../../src/api/sessions';
 import {
-  createCard,
   getCards,
+  createCard,
   reviewCard,
 } from '../../src/api/spacedRepetition';
-import { UploadedFile } from '../../src/api/upload';
 import { Card, CardCreateInput, CardReviewInput } from '../../src/types';
-import { findDocumentSource } from '../../src/utils/storage';
+import { FileUploader } from '../../components/FileUploader';
 
 export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
@@ -145,7 +143,7 @@ export default function SessionDetailScreen() {
       setShowCreateCard(false);
       fetchCards(id);
       Alert.alert('Success', 'Flashcard created!');
-    } catch (_err) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to create card');
     }
   };
@@ -164,31 +162,9 @@ export default function SessionDetailScreen() {
         setShowReviewCards(false);
         setCurrentCardIndex(0);
       }
-    } catch (_err) {
+    } catch (err) {
       Alert.alert('Error', 'Failed to submit review');
     }
-  };
-
-  const openGenerateQuizForFile = async (file: SessionFile) => {
-    const source = await findDocumentSource({
-      fileId: file.id,
-      fileName: file.file_name,
-      fileUrl: file.file_url,
-      sessionId: session?.id,
-    });
-
-    router.push({
-      pathname: '/quiz/generate',
-      params: {
-        sessionId: session?.id,
-        fileName: file.file_name,
-        fileUrl: file.file_url,
-        documentId: source?.documentId,
-        sourceText: source?.sourceText,
-        geminiFileUri: source?.geminiFileUri,
-        mimeType: source?.mimeType || file.file_type,
-      },
-    });
   };
 
   if (isLoading) {
@@ -260,57 +236,41 @@ export default function SessionDetailScreen() {
           ) : files.length > 0 ? (
             <View style={styles.filesList}>
               {files.map((file) => (
-                <View key={file.id} style={styles.fileCard}>
-                  <TouchableOpacity
-                    style={styles.fileItem}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/ai-companion',
-                        params: {
-                          sessionId: session.id,
-                          fileName: file.file_name,
-                          fileUrl: file.file_url,
-                        },
-                      });
-                    }}
-                  >
-                    <View style={styles.fileIconContainer}>
-                      <Ionicons
-                        name={
-                          getFileIcon(
-                            file.file_type,
-                          ) as keyof typeof Ionicons.glyphMap
-                        }
-                        size={22}
-                        color="#7f13ec"
-                      />
-                    </View>
-                    <View style={styles.fileInfo}>
-                      <Text style={styles.fileName} numberOfLines={1}>
-                        {file.file_name}
-                      </Text>
-                      <Text style={styles.fileMeta}>
-                        {formatFileSize(file.file_size)}
-                      </Text>
-                    </View>
-                    <Ionicons name="open-outline" size={20} color="#94a3b8" />
-                  </TouchableOpacity>
-                  <View style={styles.fileActions}>
-                    <TouchableOpacity
-                      style={styles.fileActionButton}
-                      onPress={() => {
-                        void openGenerateQuizForFile(file);
-                      }}
-                    >
-                      <Ionicons
-                        name="sparkles-outline"
-                        size={16}
-                        color="#7f13ec"
-                      />
-                      <Text style={styles.fileActionText}>Generate Quiz</Text>
-                    </TouchableOpacity>
+                <TouchableOpacity
+                  key={file.id}
+                  style={styles.fileItem}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/ai-companion',
+                      params: {
+                        sessionId: session.id,
+                        fileName: file.file_name,
+                        fileUrl: file.file_url,
+                      },
+                    });
+                  }}
+                >
+                  <View style={styles.fileIconContainer}>
+                    <Ionicons
+                      name={
+                        getFileIcon(
+                          file.file_type,
+                        ) as keyof typeof Ionicons.glyphMap
+                      }
+                      size={22}
+                      color="#7f13ec"
+                    />
                   </View>
-                </View>
+                  <View style={styles.fileInfo}>
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {file.file_name}
+                    </Text>
+                    <Text style={styles.fileMeta}>
+                      {formatFileSize(file.file_size)}
+                    </Text>
+                  </View>
+                  <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                </TouchableOpacity>
               ))}
             </View>
           ) : (
@@ -393,37 +353,10 @@ export default function SessionDetailScreen() {
         visible={showFileUploader}
         onClose={() => setShowFileUploader(false)}
         sessions={session ? [session] : []}
-        onUploadComplete={async (file: UploadedFile, sessionId) => {
+        onUploadComplete={async (file, sessionId) => {
           console.log('File uploaded:', file);
           await fetchFiles(sessionId);
           Alert.alert('Success', 'File uploaded successfully!', [
-            {
-              text: 'Generate Quiz',
-              onPress: async () => {
-                setShowFileUploader(false);
-                const refreshedFiles = await getSessionFiles(sessionId);
-                const matchingFile =
-                  refreshedFiles.find(
-                    (item) => item.file_name === file.file_name,
-                  ) || null;
-                if (matchingFile) {
-                  await openGenerateQuizForFile(matchingFile);
-                  return;
-                }
-                router.push({
-                  pathname: '/quiz/generate',
-                  params: {
-                    sessionId,
-                    fileName: file.file_name,
-                    fileUrl: file.file_url,
-                    documentId: file.document_id,
-                    sourceText: file.source_text,
-                    geminiFileUri: file.gemini_file_uri,
-                    mimeType: file.file_type,
-                  },
-                });
-              },
-            },
             {
               text: 'Open AI Companion',
               onPress: () => {
@@ -812,15 +745,12 @@ const styles = StyleSheet.create({
   filesList: {
     marginTop: 8,
   },
-  fileCard: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingVertical: 10,
-  },
   fileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 2,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   fileIconContainer: {
     width: 40,
@@ -843,25 +773,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
-  },
-  fileActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  fileActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#f3e8ff',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  fileActionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7f13ec',
   },
   uploadButtonContainer: {
     marginTop: 12,

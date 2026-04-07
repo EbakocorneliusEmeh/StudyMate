@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -16,13 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
 
-interface User {
-  name?: string;
-  full_name?: string;
-  fullName?: string;
-  email?: string;
-}
-
 interface Session {
   id: string;
   title: string;
@@ -35,50 +27,9 @@ export default function SessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
 
-  const getDisplayName = useCallback((value: User | null) => {
-    const explicitName =
-      value?.name?.trim() ||
-      value?.full_name?.trim() ||
-      value?.fullName?.trim();
-
-    if (explicitName) {
-      return explicitName;
-    }
-
-    const emailName = value?.email?.split('@')[0]?.trim();
-    if (emailName) {
-      return emailName;
-    }
-
-    return 'Profile';
-  }, []);
-
-  const loadUser = useCallback(async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-        return;
-      }
-
-      setUser(null);
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      setUser(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadUser();
-  }, [loadUser]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadUser();
-    }, [loadUser]),
-  );
+  // Dynamic user name
+  const userName = 'Mbonleng Ernest';
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -128,9 +79,8 @@ export default function SessionsPage() {
             </View>
           </TouchableOpacity>
           <View>
-            <Text style={styles.userNameText}>
-              Welcome, {getDisplayName(user)}
-            </Text>
+            <Text style={styles.greeting}>Welcome back,</Text>
+            <Text style={styles.userNameText}>{userName}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.notificationButton}>
@@ -201,11 +151,7 @@ export default function SessionsPage() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          <TouchableOpacity
-            style={styles.modeChip}
-            activeOpacity={0.9}
-            onPress={() => router.push('/(tabs)/flashcards')}
-          >
+          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
             <View
               style={[
                 styles.iconCircle,
@@ -217,11 +163,7 @@ export default function SessionsPage() {
             <Text style={styles.modeLabel}>Flashcards</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.modeChip}
-            activeOpacity={0.9}
-            onPress={() => router.push('/quiz/generate')}
-          >
+          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
             <View
               style={[
                 styles.iconCircle,
@@ -334,6 +276,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(127,19,236,0.2)',
     padding: 2,
   },
+
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
@@ -342,6 +285,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  greeting: { fontSize: 12, fontWeight: '500', color: '#64748b' },
   userNameText: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   notificationButton: {
     width: 44,

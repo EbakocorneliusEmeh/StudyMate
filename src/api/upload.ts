@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getToken, refreshAccessToken } from '../utils/storage';
 
-const BACKEND_URL = 'http://192.168.1.169:3000';
+const BACKEND_URL = 'http://172.20.10.5:3000';
 
 export class ApiError extends Error {
   constructor(
@@ -19,11 +19,6 @@ export interface UploadedFile {
   file_type: string;
   file_size: number;
   linked_to_session?: boolean;
-  document_id?: string;
-  status?: 'processing' | 'ready' | 'failed';
-  source_text?: string;
-  gemini_file_uri?: string;
-  error_message?: string | null;
 }
 
 const isNetworkError = (error: unknown): boolean => {
@@ -79,44 +74,6 @@ const normalizeUploadedFile = (
         : file.type,
     file_size: typeof record.file_size === 'number' ? record.file_size : 0,
     linked_to_session: linkedToSession,
-    document_id:
-      typeof record.documentId === 'string'
-        ? record.documentId
-        : typeof record.document_id === 'string'
-          ? record.document_id
-          : typeof record.id === 'string'
-            ? record.id
-            : undefined,
-    status:
-      record.status === 'processing' ||
-      record.status === 'ready' ||
-      record.status === 'failed'
-        ? record.status
-        : undefined,
-    source_text:
-      typeof record.sourceText === 'string'
-        ? record.sourceText
-        : typeof record.source_text === 'string'
-          ? record.source_text
-          : typeof record.extracted_text === 'string'
-            ? record.extracted_text
-            : typeof record.text_content === 'string'
-              ? record.text_content
-              : undefined,
-    gemini_file_uri:
-      typeof record.geminiFileUri === 'string'
-        ? record.geminiFileUri
-        : typeof record.gemini_file_uri === 'string'
-          ? record.gemini_file_uri
-          : typeof record.file_uri === 'string'
-            ? record.file_uri
-            : undefined,
-    error_message:
-      typeof record.errorMessage === 'string'
-        ? record.errorMessage
-        : typeof record.error_message === 'string'
-          ? record.error_message
-          : null,
   };
 };
 

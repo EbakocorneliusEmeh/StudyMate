@@ -1,56 +1,77 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
   ActivityIndicator,
   Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
 } from 'react-native';
-import { getDueCards } from '../../src/api/spacedRepetition';
-import { Card, GeneratedQuiz } from '../../src/types';
-import { getGeneratedQuizById } from '../../src/utils/storage';
+import { Ionicons } from '@expo/vector-icons';
+import { getCards, getDueCards } from '../../src/api/spacedRepetition';
+import { Card } from '../../src/types';
+
+interface QuizQuestion {
+  card: Card;
+  options?: string[];
+}
 
 export default function QuizScreen() {
-  const params = useLocalSearchParams<{ quizId?: string }>();
   const [dueCards, setDueCards] = useState<Card[]>([]);
-  const [generatedQuiz, setGeneratedQuiz] = useState<GeneratedQuiz | null>(
-    null,
-  );
   const [loading, setLoading] = useState(true);
   const [quizActive, setQuizActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showAnswer, setShowAnswer] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [quizComplete, setQuizComplete] = useState(false);
   const [quizType, setQuizType] = useState<'practice' | 'timed'>('practice');
 
   useEffect(() => {
-    void loadQuizState();
-  }, [params.quizId]);
+    loadDueCards();
+  }, []);
 
-  const loadQuizState = async () => {
+  const loadDueCards = async () => {
     try {
       setLoading(true);
-
-      if (params.quizId) {
-        const savedQuiz = await getGeneratedQuizById(params.quizId);
-        if (savedQuiz) {
-          setGeneratedQuiz(savedQuiz);
-          setDueCards([]);
-          return;
-        }
-      }
-
       const due = await getDueCards();
       setDueCards(due);
-      setGeneratedQuiz(null);
     } catch (error) {
-      console.error('Error loading quiz:', error);
+      console.error('Error loading cards:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startQuiz = (type: 'practice' | 'timed') => {
+    if (dueCards.length === 0) {
+      Alert.alert('No Cards', 'You have no cards due for review!');
+      return;
+    }
+    setQuizType(type);
+    setQuizActive(true);
+    setCurrentIndex(0);
+    setShowAnswer(false);
+    setScore({ correct: 0, total: 0 });
+    setQuizComplete(false);
+  };
+
+  const handleAnswer = (isCorrect: boolean) => {
+    setScore((prev) => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1,
+    }));
+    nextQuestion();
+  };
+
+  const nextQuestion = () => {
+    if (currentIndex < dueCards.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setShowAnswer(false);
+    } else {
+      setQuizComplete(true);
     }
   };
 
@@ -58,80 +79,8 @@ export default function QuizScreen() {
     setQuizActive(false);
     setQuizComplete(false);
     setCurrentIndex(0);
-    setSelectedOption(null);
+    setShowAnswer(false);
     setScore({ correct: 0, total: 0 });
-  };
-
-  const startQuiz = (type: 'practice' | 'timed') => {
-    const questionCount = generatedQuiz
-      ? generatedQuiz.questions.length
-      : dueCards.length;
-
-    if (questionCount === 0) {
-      Alert.alert(
-        'No Questions',
-        'There are no questions available right now.',
-      );
-      return;
-    }
-
-    setQuizType(type);
-    setQuizActive(true);
-    setCurrentIndex(0);
-    setSelectedOption(null);
-    setScore({ correct: 0, total: 0 });
-    setQuizComplete(false);
-  };
-
-  const handleGeneratedAnswer = (optionText: string) => {
-    if (!generatedQuiz) {
-      return;
-    }
-
-    if (selectedOption) {
-      return;
-    }
-
-    const currentQuestion = generatedQuiz.questions[currentIndex];
-    const isCorrect =
-      optionText.trim().toLowerCase() ===
-      currentQuestion.correct_answer.trim().toLowerCase();
-
-    setSelectedOption(optionText);
-    setScore((prev) => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-    }));
-  };
-
-  const nextQuestion = () => {
-    if (generatedQuiz) {
-      if (!selectedOption) {
-        return;
-      }
-
-      if (currentIndex < generatedQuiz.questions.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-        setSelectedOption(null);
-      } else {
-        setQuizComplete(true);
-      }
-      return;
-    }
-
-    if (currentIndex < dueCards.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    } else {
-      setQuizComplete(true);
-    }
-  };
-
-  const handleFlashcardAnswer = (isCorrect: boolean) => {
-    setScore((prev) => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-    }));
-    nextQuestion();
   };
 
   if (loading) {
@@ -143,10 +92,7 @@ export default function QuizScreen() {
   }
 
   if (quizComplete) {
-    const percentage = score.total
-      ? Math.round((score.correct / score.total) * 100)
-      : 0;
-
+    const percentage = Math.round((score.correct / score.total) * 100);
     return (
       <View style={styles.container}>
         <View style={styles.quizCompleteContainer}>
@@ -164,97 +110,8 @@ export default function QuizScreen() {
     );
   }
 
-  if (quizActive && generatedQuiz) {
-    const currentQuestion = generatedQuiz.questions[currentIndex];
-    const isAnswered = selectedOption !== null;
-
-    return (
-      <View style={styles.container}>
-        <View style={styles.quizHeader}>
-          <Text style={styles.quizProgress}>
-            Question {currentIndex + 1} of {generatedQuiz.questions.length}
-          </Text>
-          <TouchableOpacity onPress={resetQuiz}>
-            <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${((currentIndex + 1) / generatedQuiz.questions.length) * 100}%`,
-              },
-            ]}
-          />
-        </View>
-        <View style={styles.quizContent}>
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
-
-          <View style={styles.optionsList}>
-            {currentQuestion.options.map((option) => {
-              const isSelected = selectedOption === option.text;
-              const isCorrectOption =
-                option.text.trim().toLowerCase() ===
-                currentQuestion.correct_answer.trim().toLowerCase();
-              const optionStyle = isAnswered
-                ? isCorrectOption
-                  ? styles.optionCorrect
-                  : isSelected
-                    ? styles.optionWrong
-                    : styles.optionDefault
-                : styles.optionDefault;
-
-              return (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[styles.optionButton, optionStyle]}
-                  onPress={() => handleGeneratedAnswer(option.text)}
-                  disabled={isAnswered}
-                >
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      isAnswered && isCorrectOption && styles.optionLabelOnDark,
-                      isAnswered &&
-                        isSelected &&
-                        !isCorrectOption &&
-                        styles.optionLabelOnDark,
-                    ]}
-                  >
-                    {option.id}. {option.text}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {isAnswered ? (
-            <View style={styles.explanationCard}>
-              <Text style={styles.explanationTitle}>Explanation</Text>
-              <Text style={styles.explanationText}>
-                {currentQuestion.explanation}
-              </Text>
-              <TouchableOpacity
-                style={styles.nextQuestionButton}
-                onPress={nextQuestion}
-              >
-                <Text style={styles.nextQuestionText}>
-                  {currentIndex === generatedQuiz.questions.length - 1
-                    ? 'Finish Quiz'
-                    : 'Next Question'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-        </View>
-      </View>
-    );
-  }
-
   if (quizActive) {
     const currentCard = dueCards[currentIndex];
-
     return (
       <View style={styles.container}>
         <View style={styles.quizHeader}>
@@ -275,66 +132,60 @@ export default function QuizScreen() {
         </View>
         <View style={styles.quizContent}>
           <Text style={styles.questionText}>{currentCard.frontText}</Text>
-          <View style={styles.explanationCard}>
-            <Text style={styles.explanationTitle}>Answer</Text>
-            <Text style={styles.explanationText}>{currentCard.backText}</Text>
-            <Text style={styles.rateText}>Did you get it right?</Text>
-            <View style={styles.answerButtons}>
-              <TouchableOpacity
-                style={[styles.answerButton, styles.wrongButton]}
-                onPress={() => handleFlashcardAnswer(false)}
-              >
-                <Ionicons name="close" size={24} color="#fff" />
-                <Text style={styles.answerButtonText}>Wrong</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.answerButton, styles.correctButton]}
-                onPress={() => handleFlashcardAnswer(true)}
-              >
-                <Ionicons name="checkmark" size={24} color="#fff" />
-                <Text style={styles.answerButtonText}>Correct</Text>
-              </TouchableOpacity>
+          {!showAnswer ? (
+            <TouchableOpacity
+              style={styles.showAnswerButton}
+              onPress={() => setShowAnswer(true)}
+            >
+              <Text style={styles.showAnswerText}>Show Answer</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.answerSection}>
+              <Text style={styles.answerText}>{currentCard.backText}</Text>
+              <Text style={styles.rateText}>Did you get it right?</Text>
+              <View style={styles.answerButtons}>
+                <TouchableOpacity
+                  style={[styles.answerButton, styles.wrongButton]}
+                  onPress={() => handleAnswer(false)}
+                >
+                  <Ionicons name="close" size={24} color="#fff" />
+                  <Text style={styles.answerButtonText}>Wrong</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.answerButton, styles.correctButton]}
+                  onPress={() => handleAnswer(true)}
+                >
+                  <Ionicons name="checkmark" size={24} color="#fff" />
+                  <Text style={styles.answerButtonText}>Correct</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </View>
     );
   }
 
-  const defaultQuestionCount = generatedQuiz
-    ? generatedQuiz.questions.length
-    : dueCards.length;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {generatedQuiz ? generatedQuiz.title : 'Quiz'}
-        </Text>
+        <Text style={styles.headerTitle}>Quiz</Text>
         <Text style={styles.headerSubtitle}>
-          {generatedQuiz
-            ? `Saved from ${generatedQuiz.fileName}`
-            : 'Test your knowledge with flashcards'}
+          Test your knowledge with flashcards
         </Text>
       </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{defaultQuestionCount}</Text>
-          <Text style={styles.statLabel}>Questions</Text>
+          <Text style={styles.statNumber}>{dueCards.length}</Text>
+          <Text style={styles.statLabel}>Cards Due</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
-            {generatedQuiz
-              ? generatedQuiz.difficulty.charAt(0).toUpperCase()
-              : quizType === 'practice'
-                ? '∞'
-                : '5'}
+            {quizType === 'practice' ? '∞' : '5'}
           </Text>
-          <Text style={styles.statLabel}>
-            {generatedQuiz ? 'Level' : 'Questions'}
-          </Text>
+          <Text style={styles.statLabel}>Questions</Text>
         </View>
       </View>
 
@@ -350,9 +201,7 @@ export default function QuizScreen() {
           <View style={styles.quizTypeInfo}>
             <Text style={styles.quizTypeTitle}>Practice Mode</Text>
             <Text style={styles.quizTypeDesc}>
-              {generatedQuiz
-                ? 'Multiple choice with explanations'
-                : 'No time limit, learn at your pace'}
+              No time limit, learn at your pace
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
@@ -366,9 +215,7 @@ export default function QuizScreen() {
           </View>
           <View style={styles.quizTypeInfo}>
             <Text style={styles.quizTypeTitle}>Timed Challenge</Text>
-            <Text style={styles.quizTypeDesc}>
-              {generatedQuiz ? 'Quick-fire review round' : 'Beat the clock!'}
-            </Text>
+            <Text style={styles.quizTypeDesc}>Beat the clock!</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -410,6 +257,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 16,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statItem: {
     flex: 1,
@@ -445,6 +297,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   quizTypeIcon: {
     width: 48,
@@ -469,146 +326,105 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   quizHeader: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
   },
   quizProgress: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 14,
+    color: '#6b7280',
   },
   progressBar: {
-    height: 6,
+    height: 4,
     backgroundColor: '#e5e7eb',
+    marginHorizontal: 20,
+    borderRadius: 2,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#7f13ec',
+    borderRadius: 2,
   },
   quizContent: {
     flex: 1,
     padding: 20,
+    justifyContent: 'center',
   },
   questionText: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#1f2937',
-    lineHeight: 34,
-    marginBottom: 24,
+    textAlign: 'center',
+    marginBottom: 32,
   },
-  optionsList: {
-    gap: 12,
-  },
-  optionButton: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  optionDefault: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e5e7eb',
-  },
-  optionCorrect: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
-  },
-  optionWrong: {
-    backgroundColor: '#ef4444',
-    borderColor: '#ef4444',
-  },
-  optionLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1f2937',
-    lineHeight: 22,
-  },
-  optionLabelOnDark: {
-    color: '#ffffff',
-  },
-  explanationCard: {
-    marginTop: 24,
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    padding: 18,
-  },
-  explanationTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#7f13ec',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  explanationText: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 24,
-  },
-  nextQuestionButton: {
-    marginTop: 18,
+  showAnswerButton: {
     backgroundColor: '#7f13ec',
+    paddingVertical: 16,
     borderRadius: 12,
-    paddingVertical: 14,
     alignItems: 'center',
   },
-  nextQuestionText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+  showAnswerText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  answerSection: {
+    alignItems: 'center',
+  },
+  answerText: {
+    fontSize: 18,
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   rateText: {
-    marginTop: 16,
-    marginBottom: 12,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
   },
   answerButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   answerButton: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
     gap: 8,
   },
   wrongButton: {
     backgroundColor: '#ef4444',
   },
   correctButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#22c55e',
   },
   answerButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   quizCompleteContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
   completeTitle: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 24,
   },
   scoreText: {
     fontSize: 48,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#7f13ec',
-    marginTop: 12,
+    marginTop: 16,
   },
   percentageText: {
     fontSize: 18,
@@ -616,15 +432,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryButton: {
-    marginTop: 24,
     backgroundColor: '#7f13ec',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 12,
+    marginTop: 32,
   },
   retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '700',
+    color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
 });

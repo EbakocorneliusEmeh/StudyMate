@@ -39,48 +39,21 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="flashcards"
-        options={{
-          title: 'Flashcards',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="layers-outline" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="quiz"
         options={{
           title: 'Quiz',
+          href: '/quiz',
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color }) => (
             <Ionicons name="help-circle-outline" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="progress"
+        name="flashcards"
         options={{
-          title: 'Progress',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="stats-chart-outline" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="collaboration"
-        options={{
-          title: 'Team',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people-outline" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person-outline" size={24} color={color} />
-          ),
+          href: null,
+          tabBarStyle: { display: 'none' },
         }}
       />
     </Tabs>

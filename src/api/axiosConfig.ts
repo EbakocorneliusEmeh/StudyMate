@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { getRefreshToken, getToken, removeToken } from '../utils/storage';
-
-const API_URL = 'http://172.20.10.5:3000';
+import { API_URL } from '../config/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -32,7 +31,7 @@ api.interceptors.response.use(
     // Handle "Network Error" (Server is down or IP is wrong)
     if (!error.response) {
       console.error(
-        '🚨 Network Error: Check if your server is running at 192.168.1.172:3000',
+        `🚨 Network Error: Check if your server is running at ${API_URL}`,
       );
       return Promise.reject(
         new Error('Cannot connect to server. Please check your internet.'),

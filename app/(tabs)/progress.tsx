@@ -4,19 +4,17 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getStats, getProgress } from '../../src/api/progress';
+import { getStats } from '../../src/api/progress';
 import { ProgressStats, WeeklyProgress } from '../../src/types';
 
 export default function ProgressScreen() {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
     loadStats();

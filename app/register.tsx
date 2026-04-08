@@ -16,9 +16,12 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register } from '../src/api/auth';
-import { storeAuthSession, removeToken } from '../src/utils/storage';
+import {
+  removeToken,
+  setStoredUser,
+  storeAuthSession,
+} from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function RegisterScreen() {
@@ -59,7 +62,7 @@ export default function RegisterScreen() {
       // 2. Storage
       const refreshToken = data.refresh_token || null;
       await storeAuthSession(data.access_token, refreshToken);
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      await setStoredUser(data.user);
 
       Alert.alert('Success', `Welcome, ${data.user.name}!`);
 

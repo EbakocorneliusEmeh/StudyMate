@@ -296,7 +296,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../src/api/auth';
-import { removeToken, storeAuthSession } from '../src/utils/storage';
+import {
+  clearStoredUser,
+  removeToken,
+  setStoredUser,
+  storeAuthSession,
+} from '../src/utils/storage';
 
 // FIXED: Using @ts-expect-error as required by your project rules
 // @ts-expect-error - logo path may not be resolved by TS but works in Metro
@@ -319,7 +324,8 @@ export default function LoginScreen() {
     try {
       // Clear any old session data first
       await removeToken();
-      await AsyncStorage.multiRemove(['user', 'userId']);
+      await clearStoredUser();
+      await AsyncStorage.removeItem('userId');
 
       const data = await login({ email, password });
 
@@ -332,7 +338,7 @@ export default function LoginScreen() {
       await storeAuthSession(data.access_token, refreshToken);
 
       if (data.user) {
-        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        await setStoredUser(data.user);
         await AsyncStorage.setItem('userId', data.user.id);
       }
 

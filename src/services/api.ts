@@ -1,8 +1,8 @@
 import axios from 'axios';
+import { API_URL } from '../config/api';
 import { getToken } from '../utils/storage';
 import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
-
-const BASE_URL = 'http://192.168.1.172:3000';
+const BASE_URL = API_URL;
 
 // ASK GEMINI
 export const askQuestion = async (

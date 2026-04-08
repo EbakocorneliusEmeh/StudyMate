@@ -338,11 +338,24 @@ export default function LoginScreen() {
       await storeAuthSession(data.access_token, refreshToken);
 
       if (data.user) {
-        await setStoredUser(data.user);
+        const displayName =
+          data.user.name?.trim() ||
+          data.user.full_name?.trim() ||
+          data.user.email;
+
+        await setStoredUser({
+          id: data.user.id,
+          name: displayName,
+          full_name: data.user.full_name?.trim() || displayName,
+          email: data.user.email,
+        });
         await AsyncStorage.setItem('userId', data.user.id);
       }
 
-      Alert.alert('Success', `Welcome ${data.user?.name || 'Back'}`);
+      Alert.alert(
+        'Success',
+        `Welcome ${data.user?.name || data.user?.full_name || 'Back'}`,
+      );
       router.replace('/sessions');
     } catch (err: unknown) {
       // FIXED: Changed :any to :unknown and added type check

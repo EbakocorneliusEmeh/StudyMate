@@ -25,6 +25,7 @@ interface User {
   name: string;
   email: string;
   avatar_url?: string | null;
+  full_name?: string | null;
 }
 
 export default function ProfileScreen() {
@@ -50,6 +51,14 @@ export default function ProfileScreen() {
           current
             ? {
                 ...current,
+                name:
+                  profileData.full_name?.trim() ||
+                  profileData.name?.trim() ||
+                  current.name,
+                full_name:
+                  profileData.full_name?.trim() ||
+                  current.full_name ||
+                  current.name,
                 avatar_url:
                   profileData.avatar_url || current.avatar_url || null,
               }
@@ -125,7 +134,9 @@ export default function ProfileScreen() {
             <Ionicons name="person" size={40} color="#7f13ec" />
           )}
         </TouchableOpacity>
-        <Text style={styles.userName}>{user?.name || 'User'}</Text>
+        <Text style={styles.userName}>
+          {user?.full_name?.trim() || user?.name?.trim() || 'User'}
+        </Text>
         <Text style={styles.userEmail}>{user?.email || ''}</Text>
       </View>
 

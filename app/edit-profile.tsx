@@ -341,7 +341,9 @@ const EditProfileScreen = () => {
       await setStoredUser({
         id: currentUser?.id,
         name: fullName.trim(),
+        full_name: fullName.trim(),
         email: email.trim() || currentUser?.email,
+        avatar_url: image || currentUser?.avatar_url || null,
       });
 
       // 2. Update Email if provided

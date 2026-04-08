@@ -14,7 +14,9 @@ const BACKEND_URL = API_URL;
 export interface StoredUser {
   id?: string;
   name?: string;
+  full_name?: string;
   email?: string;
+  avatar_url?: string | null;
 }
 
 export const storeToken = async (token: string) => {

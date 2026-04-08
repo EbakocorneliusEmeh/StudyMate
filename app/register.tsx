@@ -62,9 +62,23 @@ export default function RegisterScreen() {
       // 2. Storage
       const refreshToken = data.refresh_token || null;
       await storeAuthSession(data.access_token, refreshToken);
-      await setStoredUser(data.user);
+      await setStoredUser({
+        id: data.user.id,
+        name:
+          data.user.name?.trim() ||
+          data.user.full_name?.trim() ||
+          data.user.email,
+        full_name:
+          data.user.full_name?.trim() ||
+          data.user.name?.trim() ||
+          data.user.email,
+        email: data.user.email,
+      });
 
-      Alert.alert('Success', `Welcome, ${data.user.name}!`);
+      Alert.alert(
+        'Success',
+        `Welcome, ${data.user.name || data.user.full_name || 'Back'}!`,
+      );
 
       router.replace('/sessions');
     } catch (err: any) {

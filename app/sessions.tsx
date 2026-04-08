@@ -48,14 +48,23 @@ export default function SessionsPage() {
   }, []);
 
   const loadUserAndAvatar = useCallback(async () => {
-    const user = await getStoredUser();
-    setUserName(user?.name?.trim() || 'User');
-
     try {
+      const user = await getStoredUser();
       const response = await api.get('/profile/me');
-      setAvatarUrl(response.data?.avatar_url || null);
+      const profileData = response.data || {};
+      const displayName =
+        profileData.full_name?.trim() ||
+        profileData.name?.trim() ||
+        user?.full_name?.trim() ||
+        user?.name?.trim() ||
+        'User';
+
+      setUserName(displayName);
+      setAvatarUrl(profileData.avatar_url || null);
     } catch (_error) {
-      setAvatarUrl(null);
+      const user = await getStoredUser();
+      setUserName(user?.full_name?.trim() || user?.name?.trim() || 'User');
+      setAvatarUrl(user?.avatar_url || null);
     }
   }, []);
 

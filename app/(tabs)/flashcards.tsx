@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -81,7 +80,7 @@ export default function FlashcardsScreen() {
       setSessionId('');
       loadCards();
       Alert.alert('Success', 'Card created successfully');
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to create card');
     }
   };
@@ -95,7 +94,7 @@ export default function FlashcardsScreen() {
       setCurrentReviewCard(null);
       setShowReviewModal(false);
       loadCards();
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to submit review');
     }
   };
@@ -110,7 +109,7 @@ export default function FlashcardsScreen() {
           try {
             await deleteCard(id);
             loadCards();
-          } catch (error) {
+          } catch (_error) {
             Alert.alert('Error', 'Failed to delete card');
           }
         },

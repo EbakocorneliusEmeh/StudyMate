@@ -1,18 +1,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { DocumentSourceRecord, GeneratedQuiz } from '../types';
+import { API_URL } from '../config/api';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
+const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
 
-const BACKEND_URL = 'http://172.20.10.5:3000';
+const BACKEND_URL = API_URL;
 
-const AUTH_TOKEN_KEY = 'authToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
-
-const BACKEND_URL = 'http://172.20.10.5:3000';
+export interface StoredUser {
+  id?: string;
+  name?: string;
+  full_name?: string;
+  email?: string;
+  avatar_url?: string | null;
+}
 
 export const storeToken = async (token: string) => {
   try {
@@ -41,6 +46,32 @@ export const storeAuthSession = async (
 
   if (refreshToken) {
     await storeRefreshToken(refreshToken);
+  }
+};
+
+export const setStoredUser = async (user: StoredUser) => {
+  try {
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.error('Failed to store user:', error);
+  }
+};
+
+export const getStoredUser = async (): Promise<StoredUser | null> => {
+  try {
+    const value = await AsyncStorage.getItem(USER_KEY);
+    return value ? (JSON.parse(value) as StoredUser) : null;
+  } catch (error) {
+    console.error('Failed to get user:', error);
+    return null;
+  }
+};
+
+export const clearStoredUser = async () => {
+  try {
+    await AsyncStorage.removeItem(USER_KEY);
+  } catch (error) {
+    console.error('Failed to remove user:', error);
   }
 };
 

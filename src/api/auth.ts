@@ -1,7 +1,9 @@
+import { API_URL } from '../config/api';
+
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3000'
-    : process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.5:3000';
+    : API_URL;
 
 interface AuthResponse {
   access_token: string;
@@ -10,6 +12,7 @@ interface AuthResponse {
     id: string;
     name: string;
     email: string;
+    full_name?: string;
   };
 }
 

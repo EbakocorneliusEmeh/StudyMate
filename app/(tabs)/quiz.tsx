@@ -3,21 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  TextInput,
-  Modal,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCards, getDueCards } from '../../src/api/spacedRepetition';
+import { getDueCards } from '../../src/api/spacedRepetition';
 import { Card } from '../../src/types';
-
-interface QuizQuestion {
-  card: Card;
-  options?: string[];
-}
 
 export default function QuizScreen() {
   const [dueCards, setDueCards] = useState<Card[]>([]);

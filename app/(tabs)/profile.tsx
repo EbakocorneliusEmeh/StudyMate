@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,25 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { removeToken } from '../../src/utils/storage';
+import { api } from '../../src/api/axiosConfig';
+import {
+  clearStoredUser,
+  getStoredUser,
+  removeToken,
+} from '../../src/utils/storage';
 import { getStats } from '../../src/api/progress';
 
 interface User {
   name: string;
   email: string;
+  avatar_url?: string | null;
+  full_name?: string | null;
 }
 
 export default function ProfileScreen() {
@@ -24,19 +33,39 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
+  const loadUserData = React.useCallback(async () => {
     try {
       setLoading(true);
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
+      const storedUser = await getStoredUser();
+      if (storedUser) {
+        setUser(storedUser);
       } else {
         router.push('/login');
+      }
+      try {
+        const profileResponse = await api.get('/profile/me');
+        const profileData = profileResponse.data || {};
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                name:
+                  profileData.full_name?.trim() ||
+                  profileData.name?.trim() ||
+                  current.name,
+                full_name:
+                  profileData.full_name?.trim() ||
+                  current.full_name ||
+                  current.name,
+                avatar_url:
+                  profileData.avatar_url || current.avatar_url || null,
+              }
+            : current,
+        );
+      } catch (_error) {
+        // Keep the stored user if profile fetch fails.
       }
       const statsData = await getStats().catch(() => null);
       setStats(statsData);
@@ -45,7 +74,13 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadUserData();
+    }, [loadUserData]),
+  );
 
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -55,7 +90,7 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await removeToken();
-          await AsyncStorage.removeItem('user');
+          await clearStoredUser();
           router.replace('/login');
         },
       },
@@ -84,10 +119,24 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={40} color="#7f13ec" />
-        </View>
-        <Text style={styles.userName}>{user?.name || 'User'}</Text>
+        <TouchableOpacity
+          style={styles.avatar}
+          onPress={() => {
+            if (user?.avatar_url) {
+              setShowAvatarModal(true);
+            }
+          }}
+          activeOpacity={0.85}
+        >
+          {user?.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={styles.avatarImg} />
+          ) : (
+            <Ionicons name="person" size={40} color="#7f13ec" />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.userName}>
+          {user?.full_name?.trim() || user?.name?.trim() || 'User'}
+        </Text>
         <Text style={styles.userEmail}>{user?.email || ''}</Text>
       </View>
 
@@ -132,6 +181,35 @@ export default function ProfileScreen() {
         <Ionicons name="log-out-outline" size={24} color="#ef4444" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
+
+      <Modal
+        visible={showAvatarModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAvatarModal(false)}
+      >
+        <View style={styles.avatarModalOverlay}>
+          <TouchableOpacity
+            style={styles.avatarModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowAvatarModal(false)}
+          />
+          <View style={styles.avatarModalContent}>
+            <TouchableOpacity
+              style={styles.avatarModalClose}
+              onPress={() => setShowAvatarModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            {user?.avatar_url && (
+              <Image
+                source={{ uri: user.avatar_url }}
+                style={styles.avatarModalImage}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -166,13 +244,52 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  avatarModalContent: {
+    width: '86%',
+    aspectRatio: 1,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+  },
+  avatarModalClose: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(17, 24, 39, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarModalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    backgroundColor: '#111827',
   },
   userName: {
     fontSize: 20,

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -75,7 +74,7 @@ export default function CollaborationScreen() {
       setInviteUserId('');
       setSessionId('');
       loadData();
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to send invitation');
     }
   };
@@ -88,7 +87,7 @@ export default function CollaborationScreen() {
       await respondToInvite(inviteSessionId, status);
       Alert.alert('Success', `Invite ${status}!`);
       loadData();
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', `Failed to ${status} invite`);
     }
   };
@@ -108,7 +107,7 @@ export default function CollaborationScreen() {
                 await removeCollaborator(sessionId, collabId);
                 loadData();
               }
-            } catch (error) {
+            } catch (_error) {
               Alert.alert('Error', 'Failed to remove collaborator');
             }
           },
@@ -119,7 +118,11 @@ export default function CollaborationScreen() {
 
   const renderEmptyState = (icon: string, text: string) => (
     <View style={styles.emptyContainer}>
-      <Ionicons name={icon as any} size={64} color="#d1d5db" />
+      <Ionicons
+        name={icon as keyof typeof Ionicons.glyphMap}
+        size={64}
+        color="#d1d5db"
+      />
       <Text style={styles.emptyText}>{text}</Text>
     </View>
   );

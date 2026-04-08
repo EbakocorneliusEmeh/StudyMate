@@ -74,7 +74,7 @@ export default function CollaborationScreen() {
       setInviteUserId('');
       setSessionId('');
       loadData();
-    } catch (_error) {
+    } catch {
       Alert.alert('Error', 'Failed to send invitation');
     }
   };
@@ -87,7 +87,7 @@ export default function CollaborationScreen() {
       await respondToInvite(inviteSessionId, status);
       Alert.alert('Success', `Invite ${status}!`);
       loadData();
-    } catch (_error) {
+    } catch {
       Alert.alert('Error', `Failed to ${status} invite`);
     }
   };
@@ -107,7 +107,7 @@ export default function CollaborationScreen() {
                 await removeCollaborator(sessionId, collabId);
                 loadData();
               }
-            } catch (_error) {
+            } catch {
               Alert.alert('Error', 'Failed to remove collaborator');
             }
           },

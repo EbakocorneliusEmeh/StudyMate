@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_URL } from '../config/api';
+// import { API_URL } from '../config/api';
 import { getToken } from '../utils/storage';
 import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
 import { Platform } from 'react-native';

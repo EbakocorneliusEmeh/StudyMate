@@ -461,7 +461,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 5,
   },
-<<<<<<< HEAD
   playIconWrap: {
     width: 28,
     height: 28,
@@ -476,6 +475,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
-=======
->>>>>>> d78d6b1 (ai-cmpanion AI)
 });

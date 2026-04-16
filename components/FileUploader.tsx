@@ -34,7 +34,10 @@ interface FileUploaderProps {
   visible: boolean;
   onClose: () => void;
   sessions: Session[];
+  initialSessionId?: string;
   onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
+  onUploadSuccess?: (message: string) => void;
+  onUploadError?: (message: string) => void;
 }
 
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
@@ -43,10 +46,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   visible,
   onClose,
   sessions,
+  initialSessionId,
   onUploadComplete,
+  onUploadSuccess,
+  onUploadError,
 }) => {
   const [selectedFile, setSelectedFile] = useState<{
-    uri: string;
+    uri: string | File;
     name: string;
     type: string;
     size: number;
@@ -64,11 +70,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   React.useEffect(() => {
     if (visible) {
       resetState();
-      if (sessions && sessions.length > 0) {
+      if (initialSessionId) {
+        setSelectedSessionId(initialSessionId);
+      } else if (sessions && sessions.length > 0) {
         setSelectedSessionId(sessions[0].id);
       }
     }
-  }, [visible]);
+  }, [initialSessionId, sessions, visible]);
 
   const resetState = () => {
     setSelectedFile(null);
@@ -80,7 +88,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const setValidatedFile = (fileInfo: {
-    uri: string;
+    uri: string | File;
     name: string;
     type: string;
     size: number;
@@ -180,8 +188,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
-      input.onchange = async (e: any) => {
-        const file = e.target.files?.[0];
+      input.onchange = async (event: Event) => {
+        const target = event.target as HTMLInputElement | null;
+        const file = target?.files?.[0];
         if (file) {
           const fileInfo = {
             uri: file,
@@ -279,16 +288,20 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       return;
     }
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
       setStatus('uploading');
       setProgress(0);
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressInterval) {
+              clearInterval(progressInterval);
+            }
             return 90;
           }
           return prev + 10;
@@ -316,10 +329,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         );
       }
 
-      clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       setProgress(100);
       setStatus('success');
-      setSuccessMessage('File uploaded and linked to session successfully!');
+      const successText = 'File uploaded and linked to session successfully!';
+      setSuccessMessage(successText);
 
       setUploadedFiles((prev) => [
         ...prev,
@@ -329,6 +345,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       if (onUploadComplete) {
         onUploadComplete(uploadResult, selectedSessionId);
       }
+      onUploadSuccess?.(successText);
 
       setTimeout(() => {
         setSelectedFile(null);
@@ -340,12 +357,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setProgress(0);
       setStatus('error');
 
+      let message = 'Failed to upload file. Please try again.';
       if (error instanceof ApiError) {
-        setErrorMessage(error.message);
+        message = error.message;
       } else if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage('Failed to upload file. Please try again.');
+        message = error.message;
+      }
+      setErrorMessage(message);
+      onUploadError?.(message);
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
       }
     }
   };

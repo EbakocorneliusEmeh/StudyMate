@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getToken, refreshAccessToken } from '../utils/storage';
 import { API_URL } from '../config/api';
+import { getToken, refreshAccessToken } from '../utils/storage';
 
 const BACKEND_URL = API_URL;
-
 export class ApiError extends Error {
   constructor(
     public message: string,
@@ -19,6 +18,9 @@ export interface UploadedFile {
   file_url: string;
   file_type: string;
   file_size: number;
+  document_id?: string;
+  source_text?: string;
+  gemini_file_uri?: string;
   linked_to_session?: boolean;
 }
 
@@ -74,6 +76,14 @@ const normalizeUploadedFile = (
         ? record.file_type
         : file.type,
     file_size: typeof record.file_size === 'number' ? record.file_size : 0,
+    document_id:
+      typeof record.document_id === 'string' ? record.document_id : undefined,
+    source_text:
+      typeof record.source_text === 'string' ? record.source_text : undefined,
+    gemini_file_uri:
+      typeof record.gemini_file_uri === 'string'
+        ? record.gemini_file_uri
+        : undefined,
     linked_to_session: linkedToSession,
   };
 };
@@ -150,7 +160,11 @@ export const uploadFile = async (
       name: file.name,
       type: file.type,
     };
-    const normalized = normalizeUploadedFile(data, fileForNormalization, false);
+    const normalized = normalizeUploadedFile(
+      data,
+      fileForNormalization,
+      Boolean(sessionId),
+    );
     if (!normalized.file_url) {
       throw new ApiError('Upload succeeded but no file URL was returned');
     }

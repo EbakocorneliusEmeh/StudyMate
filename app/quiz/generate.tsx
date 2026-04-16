@@ -26,6 +26,7 @@ import {
 } from '../../src/api/sessions';
 import { UploadedFile } from '../../src/api/upload';
 import { generateQuizWithGemini } from '../../src/services/geminiQuiz';
+import { suggestQuizTopics } from '../../src/services/api';
 import { DocumentSourceRecord, GeneratedQuiz } from '../../src/types';
 import {
   hydrateDocumentSourceFromBackend,
@@ -277,8 +278,26 @@ export default function GenerateQuizPage() {
       });
 
       await saveGeneratedQuiz(result.quiz);
+
+      const sourceForTopics = params.sourceText || resolvedSource?.sourceText;
+      let suggestedTopics: string[] = [];
+      if (sourceForTopics) {
+        try {
+          const topicsResult = await suggestQuizTopics({
+            quizTitle: result.quiz.title,
+            fileName: fileName,
+            sourceText: sourceForTopics,
+          });
+          if (topicsResult.success && topicsResult.topics?.length > 0) {
+            suggestedTopics = topicsResult.topics;
+          }
+        } catch (topicsError) {
+          console.warn('Could not fetch study topics:', topicsError);
+        }
+      }
+
       setGeneratedQuizzes((current) => [
-        result.quiz,
+        { ...result.quiz, suggestedTopics },
         ...current.filter((quiz) => quiz.id !== result.quiz.id),
       ]);
       stopProgress();
@@ -299,25 +318,34 @@ export default function GenerateQuizPage() {
     file: UploadedFile,
     sessionId: string,
   ) => {
-    setShowUploadModal(false);
-    const uploadSession =
-      sessions.find((session) => session.id === sessionId) || selectedSession;
-    setSelectedSession(uploadSession || null);
-    const refreshedFiles = await getSessionFiles(sessionId);
-    setSessionFiles(refreshedFiles);
+    try {
+      setShowUploadModal(false);
+      const uploadSession =
+        sessions.find((session) => session.id === sessionId) || selectedSession;
+      setSelectedSession(uploadSession || null);
+      const refreshedFiles = await getSessionFiles(sessionId);
+      setSessionFiles(refreshedFiles);
 
-    const matchingFile =
-      refreshedFiles.find((item) => item.file_name === file.file_name) || null;
+      const matchingFile =
+        refreshedFiles.find((item) => item.file_name === file.file_name) ||
+        null;
 
-    if (matchingFile) {
-      setSelectedFile(matchingFile);
+      if (matchingFile) {
+        setSelectedFile(matchingFile);
+      }
+
+      await persistUploadedDocumentSource({
+        uploadedFile: file,
+        sessionId,
+        fileId: matchingFile?.id,
+      });
+    } catch (error) {
+      console.error('Failed to refresh quiz uploads after upload:', error);
+      showToast(
+        'The file uploaded, but we could not refresh the quiz file list yet.',
+        'Refresh Failed',
+      );
     }
-
-    await persistUploadedDocumentSource({
-      uploadedFile: file,
-      sessionId,
-      fileId: matchingFile?.id,
-    });
   };
 
   const renderUploadSection = () => (
@@ -628,8 +656,15 @@ export default function GenerateQuizPage() {
         visible={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         sessions={sessions}
+        initialSessionId={selectedSession?.id || params.sessionId}
         onUploadComplete={(file, sessionId) => {
           void handleUploadComplete(file, sessionId);
+        }}
+        onUploadSuccess={(message) => {
+          showToast(message, 'Upload Complete');
+        }}
+        onUploadError={(message) => {
+          showToast(message, 'Upload Failed');
         }}
       />
     </SafeAreaView>

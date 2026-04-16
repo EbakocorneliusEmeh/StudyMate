@@ -39,7 +39,6 @@ export default function RootLayout() {
         <Stack.Screen name="upload-material" options={{ headerShown: false }} />
         <Stack.Screen name="session/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="create-session" options={{ headerShown: false }} />
-        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"

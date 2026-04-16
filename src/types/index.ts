@@ -95,3 +95,29 @@ export interface WeeklyProgress {
   sessionsCount: number;
   studyTimeMinutes: number;
 }
+
+export interface QuizQuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface GeneratedQuizQuestion {
+  id: string;
+  question: string;
+  options: QuizQuestionOption[];
+  correct_answer: string;
+  explanation: string;
+}
+
+export interface GeneratedQuiz {
+  id: string;
+  title: string;
+  fileName: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  numQuestions: number;
+  sessionId?: string;
+  sourcePreview?: string;
+  suggestedTopics?: string[];
+  createdAt: string;
+  questions: GeneratedQuizQuestion[];
+}

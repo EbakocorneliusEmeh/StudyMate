@@ -303,8 +303,6 @@ import {
   storeAuthSession,
 } from '../src/utils/storage';
 
-// FIXED: Using @ts-expect-error as required by your project rules
-// @ts-expect-error - logo path may not be resolved by TS but works in Metro
 import logoImg from '../assets/images/logo.png';
 
 export default function LoginScreen() {

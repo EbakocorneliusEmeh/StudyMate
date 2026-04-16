@@ -12,11 +12,26 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { searchApi } from '../api/search';
 import { sendCompanionMessage } from '../services/api';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
+const getFirstParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+
 export default function ChatScreen() {
-  const _params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    documentId?: string | string[];
+    sessionId?: string | string[];
+    fileName?: string | string[];
+    fileUrl?: string | string[];
+    fileType?: string | string[];
+  }>();
+  const documentId = getFirstParam(params.documentId);
+  const sessionId = getFirstParam(params.sessionId);
+  const fileName = getFirstParam(params.fileName);
+  const fileUrl = getFirstParam(params.fileUrl);
+  const fileType = getFirstParam(params.fileType);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,26 +46,54 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const response = await sendCompanionMessage({
-        question: currentInput,
-        history: messages.map((m) => ({
-          role: m.fromUser ? 'user' : 'model',
-          parts: [{ text: m.text }],
-        })),
-        mode: 'text',
-      });
+      const history = messages.map((m) => ({
+        role: m.fromUser ? 'user' : 'model',
+        parts: [{ text: m.text }],
+      }));
+
+      const response = documentId
+        ? await searchApi.sendCompanionMessage({
+            documentId,
+            question: currentInput,
+            history,
+          })
+        : await sendCompanionMessage({
+            question: currentInput,
+            history,
+            sessionId,
+            mode: fileType?.startsWith('image/')
+              ? 'image'
+              : fileType === 'application/pdf'
+                ? 'pdf'
+                : 'text',
+            attachmentUrl: fileUrl,
+            attachmentType: fileType || (fileUrl ? 'file' : undefined),
+          });
+
+      const replyText =
+        'answer' in response
+          ? response.answer
+          : response.text || response.message || 'No response received.';
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          text: response.text,
+          text: replyText,
           fromUser: false,
         },
       ]);
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Companion is unavailable.');
+      console.error('Companion chat failed:', err);
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as any).response?.data?.message ||
+            (err as any).response?.data?.error ||
+            (err as any).message
+          : err instanceof Error
+            ? err.message
+            : 'Companion is unavailable.';
+      Alert.alert('Error', errorMessage || 'Companion is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -76,13 +119,45 @@ export default function ChatScreen() {
                 color="white"
               />
             </View>
-            <Text style={styles.headerTitle}>StudyMate</Text>
+            <View style={styles.headerTitleWrap}>
+              <Text style={styles.headerTitle}>StudyMate</Text>
+              {documentId ? (
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  {fileName || 'Selected material'}
+                </Text>
+              ) : (
+                <Text style={styles.headerSubtitle}>
+                  General companion chat
+                </Text>
+              )}
+            </View>
           </View>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>AI TUTOR ACTIVE</Text>
+            <Text style={styles.statusText}>
+              {documentId ? 'DOC LINKED' : 'AI TUTOR ACTIVE'}
+            </Text>
           </View>
         </View>
       </View>
+
+      {documentId && (
+        <View style={styles.attachmentBanner}>
+          <View style={styles.attachmentDot}>
+            <MaterialCommunityIcons
+              name="file-document"
+              size={16}
+              color="#7f13ec"
+            />
+          </View>
+          <View style={styles.attachmentTextWrap}>
+            <Text style={styles.attachmentLabel}>Attached material</Text>
+            <Text style={styles.attachmentName} numberOfLines={1}>
+              {fileName || 'Selected document'}
+            </Text>
+          </View>
+          {!!fileUrl && <Text style={styles.attachmentHint}>Ready</Text>}
+        </View>
+      )}
 
       <FlatList
         data={messages}
@@ -98,7 +173,7 @@ export default function ChatScreen() {
               <View style={styles.aiAvatarRow}>
                 <View style={styles.aiIconCircle}>
                   <MaterialCommunityIcons
-                    name="sparkles"
+                    name="star-four-points"
                     size={12}
                     color="white"
                   />
@@ -197,12 +272,20 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
   },
+  headerTitleWrap: {
+    flex: 1,
+    marginLeft: 8,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#0f172a',
-    marginLeft: 8,
     fontFamily: Platform.OS === 'ios' ? 'Lexend' : 'sans-serif',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
   },
   logoPlaceholder: {
     width: 32,
@@ -225,6 +308,46 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   statusText: { fontSize: 10, fontWeight: '800', color: '#7f13ec' },
+
+  attachmentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(127, 19, 236, 0.08)',
+  },
+  attachmentDot: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentTextWrap: {
+    flex: 1,
+  },
+  attachmentLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7f13ec',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e1924',
+    marginTop: 2,
+  },
+  attachmentHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
 
   // List & Messages
   listContent: { padding: 20, paddingBottom: 100 },

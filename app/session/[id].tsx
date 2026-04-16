@@ -18,6 +18,7 @@ import {
   SessionFile,
   StudySession,
 } from '../../src/api/sessions';
+import { findDocumentSource } from '../../src/utils/storage';
 
 export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
@@ -93,6 +94,40 @@ export default function SessionDetailScreen() {
     return 'attach-outline';
   };
 
+  const openFileInCompanion = async (file: SessionFile) => {
+    try {
+      const localSource = await findDocumentSource({
+        fileName: file.file_name,
+        fileUrl: file.file_url,
+        sessionId: session?.id,
+      });
+
+      router.push({
+        pathname: '/ai-companion',
+        params: {
+          sessionId: session?.id,
+          fileName: localSource?.fileName || file.file_name,
+          fileUrl: localSource?.fileUrl || file.file_url,
+          fileType: localSource?.mimeType || file.file_type,
+          ...(localSource?.documentId
+            ? { documentId: localSource.documentId }
+            : {}),
+        },
+      });
+    } catch (error) {
+      console.warn('Falling back to direct companion open:', error);
+      router.push({
+        pathname: '/ai-companion',
+        params: {
+          sessionId: session?.id,
+          fileName: file.file_name,
+          fileUrl: file.file_url,
+          fileType: file.file_type,
+        },
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -166,14 +201,7 @@ export default function SessionDetailScreen() {
                   key={file.id}
                   style={styles.fileItem}
                   onPress={() => {
-                    router.push({
-                      pathname: '/ai-companion',
-                      params: {
-                        sessionId: session.id,
-                        fileName: file.file_name,
-                        fileUrl: file.file_url,
-                      },
-                    });
+                    void openFileInCompanion(file);
                   }}
                 >
                   <View style={styles.fileIconContainer}>

@@ -20,6 +20,9 @@ export interface UploadedFile {
   file_type: string;
   file_size: number;
   linked_to_session?: boolean;
+  source_text?: string | null;
+  gemini_file_uri?: string | null;
+  document_id?: string;
 }
 
 const isNetworkError = (error: unknown): boolean => {

@@ -3,7 +3,7 @@ import * as Crypto from 'expo-crypto';
 
 // Polyfill WebCrypto for Supabase PKCE
 if (!global.crypto) {
-  global.crypto = Crypto;
+  global.crypto = Crypto as unknown as typeof globalThis.crypto;
 }
 
 const supabaseUrl =

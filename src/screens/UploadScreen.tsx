@@ -11,6 +11,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { uploadFile } from '../services/api';
+import { persistUploadedDocumentSource } from '../utils/documentSources';
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -23,6 +24,18 @@ export default function UploadScreen() {
     try {
       setStatus('uploading');
       const response = await uploadFile(uri, name, type, params.sessionId);
+      if (params.sessionId) {
+        await persistUploadedDocumentSource({
+          uploadedFile: {
+            file_name: response.fileName || name,
+            file_url: response.url,
+            file_type: response.fileType || type,
+            file_size: 0,
+            document_id: response.documentId,
+          },
+          sessionId: params.sessionId,
+        });
+      }
       setStatus('success');
       Alert.alert('Upload complete', 'Do you want to open AI Companion now?', [
         { text: 'Not now', style: 'cancel', onPress: () => setStatus('idle') },
@@ -33,9 +46,13 @@ export default function UploadScreen() {
             router.push({
               pathname: '/ai-companion',
               params: {
-                documentId: response.documentId,
+                ...(response.documentId
+                  ? { documentId: response.documentId }
+                  : {}),
                 sessionId: params.sessionId,
                 fileName: response.fileName || name,
+                fileUrl: response.url,
+                fileType: response.fileType || type,
               },
             });
           },

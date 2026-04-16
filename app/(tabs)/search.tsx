@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   searchApi,
@@ -16,6 +17,7 @@ import {
 } from '../../src/api/search';
 
 export default function SearchScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
@@ -69,6 +71,23 @@ export default function SearchScreen() {
     }
   };
 
+  const openResultInAi = (item: any) => {
+    const documentId =
+      item.document_id || item.documentId || item.documents?.id;
+    const fileName =
+      item.file_name || item.title || item.documents?.file_name || 'Untitled';
+    const fileUrl = item.file_url || item.documents?.file_url || '';
+
+    router.push({
+      pathname: '/ai-companion',
+      params: {
+        ...(documentId ? { documentId: String(documentId) } : {}),
+        fileName: String(fileName),
+        fileUrl: String(fileUrl),
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>
@@ -109,6 +128,7 @@ export default function SearchScreen() {
             <FlatList
               data={history}
               keyExtractor={(item) => item.id.toString()}
+              keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.historyItem}
@@ -131,8 +151,13 @@ export default function SearchScreen() {
           data={results}
           keyExtractor={(item, index) => `${item.id || index}`}
           contentContainerStyle={styles.resultsList}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.resultItem}>
+            <TouchableOpacity
+              style={styles.resultItem}
+              onPress={() => openResultInAi(item)}
+              activeOpacity={0.85}
+            >
               <View style={styles.resultIcon}>
                 <Ionicons
                   name="document-text-outline"
@@ -142,13 +167,22 @@ export default function SearchScreen() {
               </View>
               <View style={styles.resultContent}>
                 <Text style={styles.resultTitle}>
-                  {item.title || 'Untitled'}
+                  {item.file_name || item.title || 'Untitled'}
                 </Text>
                 {item.snippet && (
                   <Text style={styles.resultSnippet} numberOfLines={2}>
                     {item.snippet}
                   </Text>
                 )}
+                <View style={styles.resultActionRow}>
+                  <Text style={styles.resultHint}>Tap to open in AI</Text>
+                  <TouchableOpacity
+                    onPress={() => openResultInAi(item)}
+                    style={styles.resultActionButton}
+                  >
+                    <Text style={styles.resultActionButtonText}>Open AI</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableOpacity>
           )}
@@ -281,5 +315,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  resultHint: {
+    fontSize: 12,
+    color: '#7f13ec',
+    fontWeight: '600',
+  },
+  resultActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 12,
+  },
+  resultActionButton: {
+    backgroundColor: 'rgba(127, 19, 236, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  resultActionButtonText: {
+    color: '#7f13ec',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

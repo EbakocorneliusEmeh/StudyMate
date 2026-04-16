@@ -72,6 +72,14 @@ export default function CreateSessionPage() {
     }
   };
 
+  const handleResultPress = (item: any) => {
+    // Navigate to AI companion with the selected item
+    router.push({
+      pathname: '/ai-companion',
+      params: { documentId: item.id, fileName: item.title },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -155,6 +163,7 @@ export default function CreateSessionPage() {
                 <TouchableOpacity
                   key={`${item.id || index}`}
                   style={styles.resultItem}
+                  onPress={() => handleResultPress(item)}
                 >
                   <View style={styles.resultIcon}>
                     <Ionicons

@@ -8,6 +8,7 @@ const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
+const SESSION_CHAT_PREFIX = 'sessionChatHistory:';
 
 const BACKEND_URL = API_URL;
 
@@ -217,4 +218,33 @@ export const findDocumentSource = async (params: {
       return false;
     }) ?? null
   );
+};
+
+export interface StoredChatMessage {
+  id: string;
+  text: string;
+  fromUser: boolean;
+}
+
+const getSessionChatHistoryKey = (sessionId: string) =>
+  `${SESSION_CHAT_PREFIX}${sessionId}`;
+
+export const getSessionChatHistory = async (
+  sessionId: string,
+): Promise<StoredChatMessage[]> =>
+  readJson<StoredChatMessage[]>(getSessionChatHistoryKey(sessionId), []);
+
+export const saveSessionChatHistory = async (
+  sessionId: string,
+  messages: StoredChatMessage[],
+) => {
+  await writeJson(getSessionChatHistoryKey(sessionId), messages);
+};
+
+export const appendSessionChatMessage = async (
+  sessionId: string,
+  message: StoredChatMessage,
+) => {
+  const current = await getSessionChatHistory(sessionId);
+  await saveSessionChatHistory(sessionId, [...current, message]);
 };

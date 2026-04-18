@@ -29,6 +29,8 @@ export interface AskQuestionOptions {
   sessionId?: string;
   fileName?: string;
   fileUrl?: string;
+  fileType?: string;
+  history?: any[];
 }
 
 export interface Card {

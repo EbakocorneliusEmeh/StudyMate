@@ -18,6 +18,8 @@ export const askQuestion = async (
       sessionId: options?.sessionId,
       fileName: options?.fileName,
       fileUrl: options?.fileUrl,
+      fileType: options?.fileType,
+      history: options?.history,
     },
     {
       headers: token

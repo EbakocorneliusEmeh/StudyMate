@@ -457,7 +457,7 @@ export default function SessionsScreen() {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Session[]>([]);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -565,7 +565,7 @@ export default function SessionsScreen() {
         <Text style={styles.headerTitle}>My Sessions</Text>
 
         <TouchableOpacity
-          onPress={() => router.push('/edit-profile')}
+          onPress={() => router.push('/(tabs)/profile')}
           style={styles.profileButton}
           activeOpacity={0.7}
         >

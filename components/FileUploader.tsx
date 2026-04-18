@@ -34,7 +34,10 @@ interface FileUploaderProps {
   visible: boolean;
   onClose: () => void;
   sessions: Session[];
+  initialSessionId?: string;
   onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
+  onUploadSuccess?: (message: string) => void;
+  onUploadError?: (message: string) => void;
 }
 
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
@@ -43,10 +46,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   visible,
   onClose,
   sessions,
+  initialSessionId,
   onUploadComplete,
+  onUploadSuccess,
+  onUploadError,
 }) => {
   const [selectedFile, setSelectedFile] = useState<{
-    uri: string;
+    uri: string | File;
     name: string;
     type: string;
     size: number;
@@ -64,11 +70,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   React.useEffect(() => {
     if (visible) {
       resetState();
-      if (sessions && sessions.length > 0) {
+      if (initialSessionId) {
+        setSelectedSessionId(initialSessionId);
+      } else if (sessions && sessions.length > 0) {
         setSelectedSessionId(sessions[0].id);
       }
     }
-  }, [visible]);
+  }, [initialSessionId, sessions, visible]);
 
   const resetState = () => {
     setSelectedFile(null);
@@ -80,7 +88,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const setValidatedFile = (fileInfo: {
-    uri: string;
+    uri: string | File;
     name: string;
     type: string;
     size: number;
@@ -174,26 +182,15 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const handleSelectFile = () => {
-    const isWeb = Platform.OS === 'web';
+    console.log('[FileUploader] handleSelectFile, Platform.OS:', Platform.OS);
 
-    if (isWeb) {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
-      input.onchange = async (e: any) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          const fileInfo = {
-            uri: file,
-            name: file.name,
-            type: file.type || 'application/octet-stream',
-            size: file.size,
-          };
-          setValidatedFile(fileInfo);
-        }
-      };
-      input.click();
-    } else {
+    // Detect actual platform - use native mobile pickers on Android/iOS
+    const isNativeMobile = Platform.OS === 'android' || Platform.OS === 'ios';
+    const isWebPlatform = Platform.OS === 'web';
+
+    // On native mobile (Android/iOS), always use native pickers
+    if (isNativeMobile) {
+      console.log('[FileUploader] Using native mobile picker');
       Alert.alert('Select File Type', 'Choose what you want to upload', [
         {
           text: 'Image',
@@ -209,7 +206,49 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         },
         { text: 'Cancel', style: 'cancel' },
       ]);
+      return;
     }
+
+    // For web platform (desktop browser), use file input
+    if (isWebPlatform) {
+      console.log('[FileUploader] Using web file input');
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
+      input.onchange = async (event: Event) => {
+        const target = event.target as HTMLInputElement | null;
+        const file = target?.files?.[0];
+        if (file) {
+          const fileInfo = {
+            uri: file,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+          };
+          setValidatedFile(fileInfo);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    // Fallback for unknown platform - try native pickers anyway
+    console.log('[FileUploader] Unknown platform, using fallback');
+    Alert.alert('Select File Type', 'Choose what you want to upload', [
+      {
+        text: 'Image',
+        onPress: () => {
+          void handleSelectImage();
+        },
+      },
+      {
+        text: 'PDF or Note',
+        onPress: () => {
+          void handleSelectDocument();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const getImageFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -279,16 +318,20 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       return;
     }
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
       setStatus('uploading');
       setProgress(0);
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressInterval) {
+              clearInterval(progressInterval);
+            }
             return 90;
           }
           return prev + 10;
@@ -298,7 +341,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       // Step 1: Upload the file to /api/upload
       const uploadResult = await uploadFile(
         {
-          uri: selectedFile.uri,
+          uri: selectedFile.uri as string,
           name: selectedFile.name,
           type: selectedFile.type,
         },
@@ -316,10 +359,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         );
       }
 
-      clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       setProgress(100);
       setStatus('success');
-      setSuccessMessage('File uploaded and linked to session successfully!');
+      const successText = 'File uploaded and linked to session successfully!';
+      setSuccessMessage(successText);
 
       setUploadedFiles((prev) => [
         ...prev,
@@ -329,6 +375,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       if (onUploadComplete) {
         onUploadComplete(uploadResult, selectedSessionId);
       }
+      onUploadSuccess?.(successText);
 
       setTimeout(() => {
         setSelectedFile(null);
@@ -340,12 +387,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setProgress(0);
       setStatus('error');
 
+      let message = 'Failed to upload file. Please try again.';
       if (error instanceof ApiError) {
-        setErrorMessage(error.message);
+        message = error.message;
       } else if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage('Failed to upload file. Please try again.');
+        message = error.message;
+      }
+      setErrorMessage(message);
+      onUploadError?.(message);
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
       }
     }
   };
@@ -406,6 +458,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     return null;
   }
 
+  // Debug logging
+  console.log(
+    '[FileUploader] Render: sessions=',
+    sessions?.length,
+    'status=',
+    status,
+    'selectedFile=',
+    selectedFile ? 'yes' : 'no',
+  );
+
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.overlayBackground} onPress={onClose} />
@@ -418,6 +480,20 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         <View style={styles.content}>
+          {/* Debug: Show if sessions is empty/missing */}
+          {(!sessions || sessions.length === 0) && (
+            <View
+              style={{
+                padding: 10,
+                backgroundColor: '#fef3c7',
+                marginBottom: 10,
+              }}
+            >
+              <Text>
+                Debug: No sessions found (add session in Sessions tab)
+              </Text>
+            </View>
+          )}
           <View style={styles.dropZone}>
             {selectedFile ? (
               <View style={styles.selectedFileContainer}>
@@ -696,13 +772,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -714,7 +792,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1001,
+    zIndex: 10000,
     padding: 20,
   },
   sessionPickerOverlay: {

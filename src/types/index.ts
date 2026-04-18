@@ -96,33 +96,6 @@ export interface WeeklyProgress {
   studyTimeMinutes: number;
 }
 
-export interface DocumentStatusResponse {
-  id: string;
-  file_name: string;
-  file_url: string;
-  file_type: string;
-  file_size: number;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
-  source_text?: string | null;
-  gemini_file_uri?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DocumentSourceRecord {
-  id: string;
-  sessionId?: string;
-  fileId?: string;
-  documentId?: string;
-  fileName: string;
-  fileUrl?: string;
-  sourceText?: string;
-  geminiFileUri?: string;
-  mimeType?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface QuizQuestionOption {
   id: string;
   text: string;
@@ -144,6 +117,21 @@ export interface GeneratedQuiz {
   numQuestions: number;
   sessionId?: string;
   sourcePreview?: string;
+  suggestedTopics?: string[];
   createdAt: string;
   questions: GeneratedQuizQuestion[];
+}
+
+export interface DocumentSourceRecord {
+  id: string;
+  sessionId?: string;
+  fileId?: string;
+  documentId?: string;
+  fileName: string;
+  fileUrl?: string;
+  sourceText?: string;
+  geminiFileUri?: string;
+  mimeType?: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../config/api';
 import { DocumentStatusResponse } from '../types';
 import { getToken, refreshAccessToken } from '../utils/storage';
 import { ApiError } from './upload';
-import { API_URL } from '../config/api';
 
 const BACKEND_URL = API_URL;
-
 const makeAuthenticatedRequest = async (
   url: string,
   options: RequestInit,

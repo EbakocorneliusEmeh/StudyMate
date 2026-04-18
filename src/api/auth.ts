@@ -1,4 +1,4 @@
-// import { API_URL } from '../config/api';
+import { API_URL } from '../config/api';
 
 const BACKEND_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'

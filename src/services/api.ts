@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/api';
-import { api } from '../api/axiosConfig';
-import { getToken } from '../utils/storage';
-import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
+
 
 // ASK GEMINI
 export const askQuestion = async (
@@ -50,7 +48,7 @@ export const uploadFile = async (
 
   formData.append('file', fileToUpload);
   if (sessionId) {
-    formData.append('sessionId', sessionId);
+    formData.append('session_id', sessionId);
   }
 
   const response = await axios.post(`${API_URL}/api/upload`, formData, {
@@ -70,9 +68,14 @@ export const uploadFile = async (
   };
 };
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export const sendCompanionMessage = async (payload: {
   question: string;
-  history: any[];
+  history: ChatMessage[];
   mode?: 'text' | 'image' | 'pdf' | 'audio' | 'research';
   attachmentUrl?: string;
   attachmentType?: string;
@@ -87,7 +90,67 @@ export const sendCompanionMessage = async (payload: {
   }
 };
 
-// Re-export from api modules for convenience
+// RE-EXPORT FROM API MODULES FOR CONVENIENCE
 export * from '../api/spacedRepetition';
 export * from '../api/collaboration';
 export * from '../api/progress';
+
+// QUIZ ASSISTANT API
+export interface QuizExplanationInput {
+  question: string;
+  questionId: string;
+  userAnswer: string;
+  correctAnswer: string;
+  explanation: string;
+  sourceText?: string;
+  isCorrect: boolean;
+}
+
+export interface QuizHintInput {
+  question: string;
+  questionId: string;
+  options: string[];
+  attemptedAnswers: string[];
+}
+
+export interface QuizTopicsInput {
+  quizTitle: string;
+  fileName: string;
+  sourceText?: string;
+}
+
+export const explainQuizAnswer = async (input: QuizExplanationInput) => {
+  const token = await getToken();
+  const response = await axios.post(`${BASE_URL}/quiz/explain`, input, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+  return response.data;
+};
+
+export const getQuizHint = async (input: QuizHintInput) => {
+  const token = await getToken();
+  const response = await axios.post(`${BASE_URL}/quiz/hint`, input, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+  return response.data;
+};
+
+export const suggestQuizTopics = async (input: QuizTopicsInput) => {
+  const token = await getToken();
+  const response = await axios.post(`${BASE_URL}/quiz/topics`, input, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : undefined,
+  });
+  return response.data;
+};

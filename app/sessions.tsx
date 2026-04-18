@@ -105,7 +105,7 @@ export default function SessionsPage() {
                 setShowAvatarModal(true);
                 return;
               }
-              router.push('/edit-profile');
+              router.push('/(tabs)/profile');
             }}
             style={styles.avatarContainer}
           >
@@ -322,7 +322,7 @@ export default function SessionsPage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push('/edit-profile')}
+          onPress={() => router.push('/(tabs)/profile')}
         >
           <Ionicons name="person-outline" size={24} color="#94a3b8" />
           <Text style={styles.navLabel}>Profile</Text>

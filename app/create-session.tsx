@@ -73,10 +73,22 @@ export default function CreateSessionPage() {
   };
 
   const handleResultPress = (item: any) => {
-    // Navigate to AI companion with the selected item
+    const documentId =
+      item.document_id || item.documentId || item.documents?.id || item.id;
+    const fileName =
+      item.file_name || item.title || item.documents?.file_name || 'Untitled';
+    const fileUrl = item.file_url || item.documents?.file_url || '';
+    const fileType =
+      item.file_type || item.fileType || item.documents?.file_type || '';
+
     router.push({
       pathname: '/ai-companion',
-      params: { documentId: item.id, fileName: item.title },
+      params: {
+        ...(documentId ? { documentId: String(documentId) } : {}),
+        fileName: String(fileName),
+        fileUrl: String(fileUrl),
+        ...(fileType ? { fileType: String(fileType) } : {}),
+      },
     });
   };
 

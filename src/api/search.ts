@@ -30,6 +30,7 @@ export interface SearchCompanionMessagePayload {
   documentId: string;
   question: string;
   history: any[];
+  sessionId?: string;
 }
 
 export interface SearchCompanionResponse {
@@ -71,5 +72,20 @@ export const searchApi = {
       payload,
     );
     return response.data;
+  },
+
+  getSessionChatHistory: async (sessionId: string): Promise<any[]> => {
+    const response = await api.get(`/chat/session/${sessionId}/history`);
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (Array.isArray(data?.messages)) {
+      return data.messages;
+    }
+    if (Array.isArray(data?.history)) {
+      return data.history;
+    }
+    return [];
   },
 };

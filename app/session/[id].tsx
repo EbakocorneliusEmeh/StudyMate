@@ -158,15 +158,24 @@ export default function SessionDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.headerBackButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#1f2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Session Details
+          </Text>
+        </View>
         <TouchableOpacity
-          style={styles.headerBackButton}
-          onPress={() => router.back()}
+          style={styles.sessionsNavButton}
+          onPress={() => router.push('/sessions')}
         >
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
+          <Ionicons name="list-outline" size={18} color="#7f13ec" />
+          <Text style={styles.sessionsNavText}>Sessions</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Session Details
-        </Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -269,20 +278,42 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#ffffff',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
   headerBackButton: {
     padding: 8,
     marginRight: 8,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
+  },
+  sessionsNavButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(127, 19, 236, 0.08)',
+  },
+  sessionsNavText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#7f13ec',
   },
   content: {
     flex: 1,

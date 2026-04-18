@@ -4,7 +4,7 @@ import { getRefreshToken, getToken, removeToken } from '../utils/storage';
 
 export const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 60000,
 });
 
 api.interceptors.request.use(
@@ -30,6 +30,12 @@ api.interceptors.response.use(
 
     // Handle "Network Error" (Server is down or IP is wrong)
     if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        console.error(`⏱️ Request timed out after 60s at ${API_URL}`);
+        return Promise.reject(
+          new Error('Request timed out. Please try again.'),
+        );
+      }
       console.error(
         `🚨 Network Error: Check if your server is running at ${API_URL}`,
       );

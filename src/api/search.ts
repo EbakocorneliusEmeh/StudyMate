@@ -26,6 +26,26 @@ export interface SearchHistoryItem {
   created_at: string;
 }
 
+export interface SearchCompanionMessagePayload {
+  documentId: string;
+  question: string;
+  history: any[];
+  sessionId?: string;
+}
+
+export interface SearchCompanionResponse {
+  answer: string;
+  document: {
+    id: string;
+    file_name: string;
+    file_url: string;
+    file_type: string;
+    file_size: number;
+    created_at: string;
+  };
+  context_source: 'extracted_text' | 'metadata_only';
+}
+
 export const searchApi = {
   search: async (filters: SearchFilters): Promise<SearchResult> => {
     const response = await api.post<SearchResult>('/search', filters);
@@ -42,5 +62,30 @@ export const searchApi = {
   getSearchHistory: async (): Promise<SearchHistoryItem[]> => {
     const response = await api.get<SearchHistoryItem[]>('/search/history');
     return response.data;
+  },
+
+  sendCompanionMessage: async (
+    payload: SearchCompanionMessagePayload,
+  ): Promise<SearchCompanionResponse> => {
+    const response = await api.post<SearchCompanionResponse>(
+      '/search/companion/message',
+      payload,
+    );
+    return response.data;
+  },
+
+  getSessionChatHistory: async (sessionId: string): Promise<any[]> => {
+    const response = await api.get(`/chat/session/${sessionId}/history`);
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (Array.isArray(data?.messages)) {
+      return data.messages;
+    }
+    if (Array.isArray(data?.history)) {
+      return data.history;
+    }
+    return [];
   },
 };

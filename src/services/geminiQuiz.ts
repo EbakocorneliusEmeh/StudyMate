@@ -262,8 +262,12 @@ export const generateQuizWithGemini = async (
   }
 
   if (!response.ok) {
+    const errorRecord =
+      responseData && typeof responseData === 'object'
+        ? (responseData as { error?: { message?: string } })
+        : null;
     const errorMessage =
-      responseData?.error?.message || 'Gemini request failed.';
+      errorRecord?.error?.message || 'Gemini request failed.';
     throw new Error(errorMessage);
   }
 

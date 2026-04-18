@@ -76,7 +76,7 @@ export default function QuizScreen() {
 
   const handleStartQuiz = (quizId: string) => {
     router.push({
-      pathname: '/quiz/[id]',
+      pathname: '/quiz/generate',
       params: { id: quizId },
     });
   };

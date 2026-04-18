@@ -1,6 +1,9 @@
 import { API_URL } from '../config/api';
 
-const BACKEND_URL = API_URL;
+const BACKEND_URL =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.172:3000';
 
 interface AuthResponse {
   access_token: string;

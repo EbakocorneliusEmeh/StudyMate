@@ -59,10 +59,11 @@ export default function ProfileScreen() {
       const storedUser = await getStoredUser();
       if (storedUser) {
         setUser({
-          name: storedUser.name || '',
+          name:
+            storedUser.full_name?.trim() || storedUser.name?.trim() || 'User',
           email: storedUser.email || '',
           avatar_url: storedUser.avatar_url || null,
-          full_name: storedUser.full_name || null,
+          full_name: storedUser.full_name || storedUser.name || null,
         });
       } else {
         router.push('/login');

@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { DocumentSourceRecord, GeneratedQuiz } from '../types';
+import { DocumentSourceRecord, GeneratedQuiz, FlashcardDeck } from '../types';
 import { API_URL } from '../config/api';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
+const GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
 
 const BACKEND_URL = API_URL;
@@ -217,4 +218,20 @@ export const findDocumentSource = async (params: {
       return false;
     }) ?? null
   );
+};
+
+export const getGeneratedFlashcards = async (): Promise<FlashcardDeck[]> =>
+  readJson<FlashcardDeck[]>(GENERATED_FLASHCARDS_KEY, []);
+
+export const saveGeneratedFlashcards = async (deck: FlashcardDeck) => {
+  const decks = await getGeneratedFlashcards();
+  const nextDecks = [deck, ...decks.filter((item) => item.id !== deck.id)];
+  await writeJson(GENERATED_FLASHCARDS_KEY, nextDecks);
+};
+
+export const getGeneratedFlashcardsById = async (
+  deckId: string,
+): Promise<FlashcardDeck | null> => {
+  const decks = await getGeneratedFlashcards();
+  return decks.find((deck) => deck.id === deckId) ?? null;
 };

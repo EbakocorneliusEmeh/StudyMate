@@ -122,6 +122,41 @@ export interface GeneratedQuiz {
   questions: GeneratedQuizQuestion[];
 }
 
+export interface GeneratedFlashcard {
+  id: string;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardDeck {
+  id: string;
+  title: string;
+  sourceFileName: string;
+  sourceText?: string;
+  geminiFileUri?: string;
+  mimeType?: string;
+  cardCount: number;
+  createdAt: string;
+  cards: GeneratedFlashcard[];
+  isGenerating?: boolean;
+  generationProgress?: number;
+}
+
+export interface FlashcardChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface FlashcardGenerationRequest {
+  numCards?: number;
+  sourceText?: string;
+  fileName: string;
+  geminiFileUri?: string;
+  mimeType?: string;
+}
+
 export interface DocumentSourceRecord {
   id: string;
   sessionId?: string;

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { linkFileToSession } from '../src/api/sessions';
 import {
   ApiError,
   deleteFile,
@@ -21,7 +22,6 @@ import {
   uploadFile,
   validateFile,
 } from '../src/api/upload';
-import { linkFileToSession } from '../src/api/sessions';
 
 interface Session {
   id: string;

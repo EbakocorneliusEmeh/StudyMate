@@ -9,12 +9,7 @@ import {
   Image,
   Modal,
   Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
   TextInput,
-  TouchableOpacity,
-  View,
 } from 'react-native';
 import { api } from '../../src/api/axiosConfig';
 import { getStats } from '../../src/api/progress';

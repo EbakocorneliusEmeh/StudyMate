@@ -9,7 +9,6 @@ import React, {
 } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -27,12 +26,7 @@ import {
 } from '../../src/api/sessions';
 import { UploadedFile } from '../../src/api/upload';
 import { suggestQuizTopics } from '../../src/services/api';
-import {
-  generateQuizWithGemini,
-  generateQuizWithGroq,
-  generateQuizWithOpenAI,
-  generateQuizWithOpenRouter,
-} from '../../src/services/geminiQuiz';
+import { generateQuizWithGemini } from '../../src/services/geminiQuiz';
 import { DocumentSourceRecord, GeneratedQuiz } from '../../src/types';
 import {
   hydrateDocumentSourceFromBackend,
@@ -347,7 +341,6 @@ export default function GenerateQuizPage() {
       }
 
       await saveGeneratedQuiz(result.quiz);
-      console.log('[Quiz] Quiz saved successfully!');
 
       const sourceForTopics = params.sourceText || resolvedSource?.sourceText;
       let suggestedTopics: string[] = [];
@@ -409,20 +402,6 @@ export default function GenerateQuizPage() {
         sessionId,
         fileId: matchingFile?.id,
       });
-
-      Alert.alert(
-        'File Uploaded!',
-        `Would you like to generate a quiz from "${file.file_name}" now?`,
-        [
-          { text: 'Later', style: 'cancel' },
-          {
-            text: 'Generate Quiz',
-            onPress: () => {
-              setTimeout(() => handleGenerateQuiz(), 500);
-            },
-          },
-        ],
-      );
     } catch (error) {
       console.error('Failed to refresh quiz uploads after upload:', error);
       showToast(

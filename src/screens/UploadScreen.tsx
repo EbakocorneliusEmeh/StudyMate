@@ -28,14 +28,23 @@ export default function UploadScreen() {
         params.sessionId ? `session-${params.sessionId}` : undefined,
       );
       setStatus('success');
-      setStatus('idle');
-      router.push({
-        pathname: '/ai-companion',
-        params: {
-          documentId: String(response.document_id || ''),
-          fileName: response.file_name || name,
+      Alert.alert('Upload complete', 'Do you want to open AI Companion now?', [
+        { text: 'Not now', style: 'cancel', onPress: () => setStatus('idle') },
+        {
+          text: 'Open AI now',
+          onPress: () => {
+            setStatus('idle');
+            router.push({
+              pathname: '/ai-companion',
+              params: {
+                documentId: response.document_id,
+                sessionId: params.sessionId,
+                fileName: response.file_name || name,
+              },
+            });
+          },
         },
-      });
+      ]);
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -126,7 +135,7 @@ export default function UploadScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Upload Study Material</Text>
         <Text style={styles.subtitle}>
-          Choose what you want to upload, then we’ll open it in AI Companion.
+          Choose what you want to upload, then we'll open it in AI Companion.
         </Text>
       </View>
 

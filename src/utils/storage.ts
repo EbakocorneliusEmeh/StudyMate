@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { DocumentSourceRecord, GeneratedQuiz, FlashcardDeck } from '../types';
 import { API_URL } from '../config/api';
+import { DocumentSourceRecord, GeneratedQuiz } from '../types';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
-const GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
+const _GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
+const SESSION_CHAT_PREFIX = 'sessionChatHistory:';
 
 const BACKEND_URL = API_URL;
 
@@ -220,18 +221,31 @@ export const findDocumentSource = async (params: {
   );
 };
 
-export const getGeneratedFlashcards = async (): Promise<FlashcardDeck[]> =>
-  readJson<FlashcardDeck[]>(GENERATED_FLASHCARDS_KEY, []);
+export interface StoredChatMessage {
+  id: string;
+  text: string;
+  fromUser: boolean;
+}
 
-export const saveGeneratedFlashcards = async (deck: FlashcardDeck) => {
-  const decks = await getGeneratedFlashcards();
-  const nextDecks = [deck, ...decks.filter((item) => item.id !== deck.id)];
-  await writeJson(GENERATED_FLASHCARDS_KEY, nextDecks);
+const getSessionChatHistoryKey = (sessionId: string) =>
+  `${SESSION_CHAT_PREFIX}${sessionId}`;
+
+export const getSessionChatHistory = async (
+  sessionId: string,
+): Promise<StoredChatMessage[]> =>
+  readJson<StoredChatMessage[]>(getSessionChatHistoryKey(sessionId), []);
+
+export const saveSessionChatHistory = async (
+  sessionId: string,
+  messages: StoredChatMessage[],
+) => {
+  await writeJson(getSessionChatHistoryKey(sessionId), messages);
 };
 
-export const getGeneratedFlashcardsById = async (
-  deckId: string,
-): Promise<FlashcardDeck | null> => {
-  const decks = await getGeneratedFlashcards();
-  return decks.find((deck) => deck.id === deckId) ?? null;
+export const appendSessionChatMessage = async (
+  sessionId: string,
+  message: StoredChatMessage,
+) => {
+  const current = await getSessionChatHistory(sessionId);
+  await saveSessionChatHistory(sessionId, [...current, message]);
 };

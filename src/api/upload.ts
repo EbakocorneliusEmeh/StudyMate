@@ -1,108 +1,8 @@
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { File } from 'expo-file-system';
 import { API_URL } from '../config/api';
 import { getToken, refreshAccessToken } from '../utils/storage';
 
 const BACKEND_URL = API_URL;
-
-const fileToBase64 = async (uri: string | File): Promise<string> => {
-  console.log('[fileToBase64] Input URI:', uri);
-
-  if (typeof File !== 'undefined' && uri instanceof File) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(uri);
-    });
-  }
-
-  // For any file:// or content:// URIs (mobile) - try FileSystem first for cache directories
-  if (
-    typeof uri === 'string' &&
-    (uri.startsWith('file://') || uri.startsWith('content://'))
-  ) {
-    try {
-      // Check if it's an Expo cache file - use File API to read
-      if (uri.includes('DocumentPicker') || uri.includes('cache')) {
-        const file = new File(uri);
-        const base64 = await file.base64();
-        return base64;
-      }
-      // Fallback to fetch for other file URIs
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      console.log('[fileToBase64] Error fetching:', e);
-    }
-  }
-
-  // For web URLs
-  if (typeof uri === 'string' && uri.startsWith('http')) {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  // Try as a local file path - read directly
-  if (typeof uri === 'string') {
-    console.log('[fileToBase64] Trying direct read for:', uri);
-    try {
-      // Try File API for local files
-      if (typeof File !== 'undefined') {
-        try {
-          const file = new File(uri);
-          const base64 = await file.base64();
-          return base64;
-        } catch {}
-      }
-      // Fallback to fetch
-      const response = await fetch(uri);
-      if (response.ok) {
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64 = result.split(',')[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      }
-    } catch (e) {
-      console.log('[fileToBase64] Direct fetch error:', e);
-    }
-  }
-
-  throw new Error('Unsupported file type: ' + uri);
-};
-
 export class ApiError extends Error {
   constructor(
     public message: string,
@@ -118,10 +18,10 @@ export interface UploadedFile {
   file_url: string;
   file_type: string;
   file_size: number;
-  source_text?: string;
-  linked_to_session?: boolean;
-  gemini_file_uri?: string | null;
   document_id?: string;
+  source_text?: string;
+  gemini_file_uri?: string;
+  linked_to_session?: boolean;
 }
 
 const isNetworkError = (error: unknown): boolean => {
@@ -177,11 +77,7 @@ const normalizeUploadedFile = (
         : file.type,
     file_size: typeof record.file_size === 'number' ? record.file_size : 0,
     document_id:
-      typeof record.document_id === 'string'
-        ? record.document_id
-        : typeof record.id === 'string'
-          ? record.id
-          : undefined,
+      typeof record.document_id === 'string' ? record.document_id : undefined,
     source_text:
       typeof record.source_text === 'string' ? record.source_text : undefined,
     gemini_file_uri:
@@ -230,7 +126,7 @@ export const uploadFile = async (
   sessionId?: string,
   folder?: string,
 ): Promise<UploadedFile> => {
-  const isWeb =
+  const _isWeb =
     typeof window !== 'undefined' &&
     typeof File !== 'undefined' &&
     file.uri instanceof File;
@@ -281,62 +177,6 @@ export const uploadFile = async (
       console.log('[Upload] Error:', e);
       throw new ApiError(e instanceof Error ? e.message : 'Upload failed', 500);
     }
-  }
-
-  try {
-    const formData = new FormData();
-
-    if (isWeb) {
-      formData.append('file', file.uri as File);
-    } else {
-      const fileObj: Record<string, string> = {
-        uri: file.uri,
-        type: file.type || 'application/octet-stream',
-        name: file.name,
-      };
-      formData.append('file', fileObj as unknown as Blob);
-    }
-
-    if (folder) formData.append('folder', folder as string);
-    if (sessionId) formData.append('session_id', sessionId as string);
-
-    const res = await makeAuthenticatedRequest(`${BACKEND_URL}/api/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    console.log('[Upload] Response status:', res.status);
-    const data = await parseResponseBody(res);
-    console.log('[Upload] Response data:', JSON.stringify(data));
-
-    if (!res.ok) {
-      console.log('[Upload] Error response:', res.status, data);
-      const errorMsg = getErrorMessage(data, 'Failed to upload file');
-      Alert.alert('Upload failed', `Status: ${res.status}, Error: ${errorMsg}`);
-      throw new ApiError(errorMsg, res.status);
-    }
-
-    const fileForNormalization = {
-      uri: isWeb ? '' : file.uri,
-      name: file.name,
-      type: file.type,
-    };
-    const normalized = normalizeUploadedFile(
-      data,
-      fileForNormalization,
-      Boolean(sessionId),
-    );
-    if (!normalized.file_url) {
-      throw new ApiError('Upload succeeded but no file URL was returned');
-    }
-    return normalized;
-  } catch (error) {
-    if (isNetworkError(error)) {
-      throw new ApiError(
-        'Unable to connect to server. Please check your internet connection.',
-      );
-    }
-    throw error;
   }
 };
 

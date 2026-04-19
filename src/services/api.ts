@@ -1,12 +1,36 @@
 import axios from 'axios';
 import { API_URL } from '../config/api';
-import { AskQuestionOptions, ChatResponse, UploadResponse } from '../types';
 import { getToken } from '../utils/storage';
 import { api } from '../api/axiosConfig';
 
-const BASE_URL = API_URL;
+export interface AskQuestionOptions {
+  documentId?: string;
+  sessionId?: string;
+  fileName?: string;
+  fileUrl?: string;
+  fileType?: string;
+  history?: ChatMessage[];
+}
 
-// ASK GEMINI
+export interface ChatResponse {
+  answer: string;
+  sessionId?: string;
+  documentId?: string;
+}
+
+export interface UploadResponse {
+  message: string;
+  documentId: string;
+  url?: string;
+  fileName: string;
+  fileType: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export const askQuestion = async (
   question: string,
   options?: AskQuestionOptions,
@@ -20,6 +44,8 @@ export const askQuestion = async (
       sessionId: options?.sessionId,
       fileName: options?.fileName,
       fileUrl: options?.fileUrl,
+      fileType: options?.fileType,
+      history: options?.history,
     },
     {
       headers: token
@@ -32,7 +58,6 @@ export const askQuestion = async (
   return response.data;
 };
 
-// UPLOAD PDF
 export const uploadFile = async (
   uri: string,
   name: string,
@@ -54,6 +79,7 @@ export const uploadFile = async (
 
   const response = await axios.post(`${API_URL}/api/upload`, formData, {
     headers: {
+      'Content-Type': 'multipart/form-data',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
@@ -67,11 +93,6 @@ export const uploadFile = async (
     fileType: response.data.fileType || response.data.file_type || type,
   };
 };
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 export const sendCompanionMessage = async (payload: {
   question: string;
@@ -90,12 +111,10 @@ export const sendCompanionMessage = async (payload: {
   }
 };
 
-// RE-EXPORT FROM API MODULES FOR CONVENIENCE
 export * from '../api/collaboration';
 export * from '../api/progress';
 export * from '../api/spacedRepetition';
 
-// QUIZ ASSISTANT API
 export interface QuizExplanationInput {
   question: string;
   questionId: string;
@@ -121,7 +140,7 @@ export interface QuizTopicsInput {
 
 export const explainQuizAnswer = async (input: QuizExplanationInput) => {
   const token = await getToken();
-  const response = await axios.post(`${BASE_URL}/quiz/explain`, input, {
+  const response = await axios.post(`${API_URL}/quiz/explain`, input, {
     headers: token
       ? {
           Authorization: `Bearer ${token}`,
@@ -133,7 +152,7 @@ export const explainQuizAnswer = async (input: QuizExplanationInput) => {
 
 export const getQuizHint = async (input: QuizHintInput) => {
   const token = await getToken();
-  const response = await axios.post(`${BASE_URL}/quiz/hint`, input, {
+  const response = await axios.post(`${API_URL}/quiz/hint`, input, {
     headers: token
       ? {
           Authorization: `Bearer ${token}`,
@@ -145,7 +164,7 @@ export const getQuizHint = async (input: QuizHintInput) => {
 
 export const suggestQuizTopics = async (input: QuizTopicsInput) => {
   const token = await getToken();
-  const response = await axios.post(`${BASE_URL}/quiz/topics`, input, {
+  const response = await axios.post(`${API_URL}/quiz/topics`, input, {
     headers: token
       ? {
           Authorization: `Bearer ${token}`,

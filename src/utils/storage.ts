@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { DocumentSourceRecord, GeneratedQuiz } from '../types';
 import { API_URL } from '../config/api';
+import { DocumentSourceRecord, GeneratedQuiz } from '../types';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
+const _GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
 const SESSION_CHAT_PREFIX = 'sessionChatHistory:';
 

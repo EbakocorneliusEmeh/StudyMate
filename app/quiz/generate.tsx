@@ -25,8 +25,8 @@ import {
   StudySession,
 } from '../../src/api/sessions';
 import { UploadedFile } from '../../src/api/upload';
-import { generateQuizWithGemini } from '../../src/services/geminiQuiz';
 import { suggestQuizTopics } from '../../src/services/api';
+import { generateQuizWithGemini } from '../../src/services/geminiQuiz';
 import { DocumentSourceRecord, GeneratedQuiz } from '../../src/types';
 import {
   hydrateDocumentSourceFromBackend,
@@ -264,18 +264,81 @@ export default function GenerateQuizPage() {
           ? selectedFile.file_url
           : undefined);
 
-      const result = await generateQuizWithGemini({
-        numQuestions,
-        difficulty,
-        fileName,
-        sessionId: selectedSession?.id || params.sessionId,
-        sourceText: params.sourceText || resolvedSource?.sourceText,
-        geminiFileUri: fallbackGeminiUri || resolvedSource?.geminiFileUri,
-        mimeType:
-          params.mimeType ||
-          resolvedSource?.mimeType ||
-          selectedFile?.file_type,
-      });
+      let result;
+      console.log('[Quiz] Starting quiz generation...');
+
+      // Try OpenRouter first (most reliable)
+      try {
+        console.log('[Quiz] Trying OpenRouter...');
+        result = await generateQuizWithOpenRouter({
+          numQuestions,
+          difficulty,
+          fileName,
+          sessionId: selectedSession?.id || params.sessionId,
+          sourceText: params.sourceText || resolvedSource?.sourceText,
+        });
+        console.log('[Quiz] OpenRouter succeeded!');
+      } catch (orError) {
+        const err = orError as Error;
+        console.log('[Quiz] OpenRouter failed:', err.message);
+
+        // Try OpenAI
+        try {
+          console.log('[Quiz] Trying OpenAI...');
+          result = await generateQuizWithOpenAI({
+            numQuestions,
+            difficulty,
+            fileName,
+            sessionId: selectedSession?.id || params.sessionId,
+            sourceText: params.sourceText || resolvedSource?.sourceText,
+          });
+          console.log('[Quiz] OpenAI succeeded!');
+        } catch (openaiError) {
+          const err2 = openaiError as Error;
+          console.log('[Quiz] OpenAI failed:', err2.message);
+
+          // Try Groq
+          try {
+            console.log('[Quiz] Trying Groq...');
+            result = await generateQuizWithGroq({
+              numQuestions,
+              difficulty,
+              fileName,
+              sessionId: selectedSession?.id || params.sessionId,
+              sourceText: params.sourceText || resolvedSource?.sourceText,
+            });
+            console.log('[Quiz] Groq succeeded!');
+          } catch (groqError) {
+            const err3 = groqError as Error;
+            console.log('[Quiz] Groq failed:', err3.message);
+
+            // Try Gemini last (it has free tier)
+            try {
+              console.log('[Quiz] Trying Gemini...');
+              result = await generateQuizWithGemini({
+                numQuestions,
+                difficulty,
+                fileName,
+                sessionId: selectedSession?.id || params.sessionId,
+                sourceText: params.sourceText || resolvedSource?.sourceText,
+                geminiFileUri:
+                  fallbackGeminiUri || resolvedSource?.geminiFileUri,
+                mimeType:
+                  params.mimeType ||
+                  resolvedSource?.mimeType ||
+                  selectedFile?.file_type,
+              });
+              console.log('[Quiz] Gemini succeeded!');
+            } catch (geminiError) {
+              const err4 = geminiError as Error;
+              console.log('[Quiz] Gemini failed:', err4.message);
+              throw new Error(
+                `All AI providers failed: OpenRouter(${err.message}), OpenAI(${err2.message}), Groq(${err3.message}), Gemini(${err4.message})`,
+              );
+            }
+          }
+        }
+      }
 
       await saveGeneratedQuiz(result.quiz);
 
@@ -359,7 +422,9 @@ export default function GenerateQuizPage() {
       </Text>
       <TouchableOpacity
         style={styles.selectFileButton}
-        onPress={() => setShowUploadModal(true)}
+        onPress={() => {
+          setShowUploadModal(true);
+        }}
       >
         <Text style={styles.selectFileButtonText}>Upload More Files</Text>
       </TouchableOpacity>

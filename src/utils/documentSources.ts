@@ -1,4 +1,4 @@
-import { getDocumentStatus } from '../api/documents';
+import { getDocumentChunks, getDocumentStatus } from '../api/documents';
 import { UploadedFile } from '../api/upload';
 import { DocumentSourceRecord } from '../types';
 import { upsertDocumentSource } from './storage';
@@ -69,6 +69,18 @@ export const hydrateDocumentSourceFromBackend = async (params: {
 }): Promise<DocumentSourceRecord | null> => {
   const document = await getDocumentStatus(params.documentId);
 
+  // Fetch extracted text chunks
+  let sourceText: string | undefined;
+  try {
+    const chunksData = await getDocumentChunks(params.documentId);
+    if (chunksData.chunks && chunksData.chunks.length > 0) {
+      // Combine all chunks into a single text
+      sourceText = chunksData.chunks.map((c) => c.content).join('\n\n');
+    }
+  } catch (err) {
+    console.warn('Failed to fetch document chunks:', err);
+  }
+
   const sourceRecord: DocumentSourceRecord = {
     id: `${params.sessionId}:${params.fileName}`,
     sessionId: params.sessionId,
@@ -76,7 +88,7 @@ export const hydrateDocumentSourceFromBackend = async (params: {
     documentId: params.documentId,
     fileName: document.file_name || params.fileName,
     fileUrl: document.file_url || params.fileUrl,
-    sourceText: document.source_text || undefined,
+    sourceText: sourceText,
     geminiFileUri: document.gemini_file_uri || undefined,
     mimeType: document.file_type,
     createdAt: document.created_at,

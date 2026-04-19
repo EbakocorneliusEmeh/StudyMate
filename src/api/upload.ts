@@ -22,9 +22,6 @@ export interface UploadedFile {
   source_text?: string;
   gemini_file_uri?: string;
   linked_to_session?: boolean;
-  source_text?: string | null;
-  gemini_file_uri?: string | null;
-  document_id?: string;
 }
 
 const isNetworkError = (error: unknown): boolean => {
@@ -129,56 +126,57 @@ export const uploadFile = async (
   sessionId?: string,
   folder?: string,
 ): Promise<UploadedFile> => {
-  try {
-    const formData = new FormData();
+  const _isWeb =
+    typeof window !== 'undefined' &&
+    typeof File !== 'undefined' &&
+    file.uri instanceof File;
 
-    const isWeb = typeof window !== 'undefined' && file.uri instanceof File;
-    if (isWeb) {
-      formData.append('file', file.uri as File);
-    } else {
-      formData.append('file', {
-        uri: file.uri,
-        name: file.name,
-        type: file.type,
-      } as unknown as Blob);
+  // ALWAYS use JSON endpoint for string URIs (works everywhere)
+  if (true) {
+    try {
+      console.log('[Upload] Using JSON endpoint for:', file.name);
+
+      let token = await getToken();
+      if (!token) {
+        token = await AsyncStorage.getItem('access_token');
+      }
+      console.log('[Upload] Token exists:', !!token);
+
+      const base64 = await fileToBase64(file.uri);
+      console.log('[Upload] Base64 length:', base64?.length);
+
+      if (!base64) {
+        throw new ApiError('Failed to read file', 500);
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/upload/json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fileData: base64,
+          fileName: file.name,
+          fileType: file.type,
+          folder,
+          session_id: sessionId,
+        }),
+      });
+
+      console.log('[Upload] Response status:', response.status);
+      const data = await response.json();
+      console.log('[Upload] Response data:', JSON.stringify(data));
+
+      if (!response.ok) {
+        throw new ApiError(data.message || 'Upload failed', response.status);
+      }
+
+      return normalizeUploadedFile(data, file, false);
+    } catch (e) {
+      console.log('[Upload] Error:', e);
+      throw new ApiError(e instanceof Error ? e.message : 'Upload failed', 500);
     }
-
-    if (folder) formData.append('folder', folder);
-    if (sessionId) formData.append('session_id', sessionId);
-
-    const res = await makeAuthenticatedRequest(`${BACKEND_URL}/api/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await parseResponseBody(res);
-
-    if (!res.ok) {
-      const errorMsg = getErrorMessage(data, 'Failed to upload file');
-      throw new ApiError(errorMsg, res.status);
-    }
-
-    const fileForNormalization = {
-      uri: isWeb ? '' : file.uri,
-      name: file.name,
-      type: file.type,
-    };
-    const normalized = normalizeUploadedFile(
-      data,
-      fileForNormalization,
-      Boolean(sessionId),
-    );
-    if (!normalized.file_url) {
-      throw new ApiError('Upload succeeded but no file URL was returned');
-    }
-    return normalized;
-  } catch (error) {
-    if (isNetworkError(error)) {
-      throw new ApiError(
-        'Unable to connect to server. Please check your internet connection.',
-      );
-    }
-    throw error;
   }
 };
 
@@ -244,11 +242,14 @@ export const getSignedUrl = async (
 
 export const ALLOWED_FILE_TYPES = [
   'image/jpeg',
+  'image/jpg',
   'image/png',
   'image/gif',
   'image/webp',
   'image/heic',
   'image/heif',
+  'image/bmp',
+  'image/x-bitmap',
   'application/pdf',
   'text/plain',
   'text/markdown',
@@ -262,7 +263,11 @@ export const validateFile = (file: {
   type: string;
   size: number;
 }): string | null => {
-  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+  const fileTypeLower = file.type.toLowerCase();
+  const isAllowed = ALLOWED_FILE_TYPES.some(
+    (allowed) => allowed.toLowerCase() === fileTypeLower,
+  );
+  if (!isAllowed) {
     return 'File type not allowed';
   }
   if (file.size > MAX_FILE_SIZE) {

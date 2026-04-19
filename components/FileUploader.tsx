@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { linkFileToSession } from '../src/api/sessions';
 import {
   ApiError,
   deleteFile,
@@ -21,7 +22,6 @@ import {
   uploadFile,
   validateFile,
 } from '../src/api/upload';
-import { linkFileToSession } from '../src/api/sessions';
 
 interface Session {
   id: string;
@@ -182,9 +182,36 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const handleSelectFile = () => {
-    const isWeb = Platform.OS === 'web';
+    console.log('[FileUploader] handleSelectFile, Platform.OS:', Platform.OS);
 
-    if (isWeb) {
+    // Detect actual platform - use native mobile pickers on Android/iOS
+    const isNativeMobile = Platform.OS === 'android' || Platform.OS === 'ios';
+    const isWebPlatform = Platform.OS === 'web';
+
+    // On native mobile (Android/iOS), always use native pickers
+    if (isNativeMobile) {
+      console.log('[FileUploader] Using native mobile picker');
+      Alert.alert('Select File Type', 'Choose what you want to upload', [
+        {
+          text: 'Image',
+          onPress: () => {
+            void handleSelectImage();
+          },
+        },
+        {
+          text: 'PDF or Note',
+          onPress: () => {
+            void handleSelectDocument();
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+
+    // For web platform (desktop browser), use file input
+    if (isWebPlatform) {
+      console.log('[FileUploader] Using web file input');
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
@@ -202,23 +229,26 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         }
       };
       input.click();
-    } else {
-      Alert.alert('Select File Type', 'Choose what you want to upload', [
-        {
-          text: 'Image',
-          onPress: () => {
-            void handleSelectImage();
-          },
-        },
-        {
-          text: 'PDF or Note',
-          onPress: () => {
-            void handleSelectDocument();
-          },
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      return;
     }
+
+    // Fallback for unknown platform - try native pickers anyway
+    console.log('[FileUploader] Unknown platform, using fallback');
+    Alert.alert('Select File Type', 'Choose what you want to upload', [
+      {
+        text: 'Image',
+        onPress: () => {
+          void handleSelectImage();
+        },
+      },
+      {
+        text: 'PDF or Note',
+        onPress: () => {
+          void handleSelectDocument();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const getImageFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -311,7 +341,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       // Step 1: Upload the file to /api/upload
       const uploadResult = await uploadFile(
         {
-          uri: selectedFile.uri,
+          uri: selectedFile.uri as string,
           name: selectedFile.name,
           type: selectedFile.type,
         },
@@ -428,6 +458,16 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     return null;
   }
 
+  // Debug logging
+  console.log(
+    '[FileUploader] Render: sessions=',
+    sessions?.length,
+    'status=',
+    status,
+    'selectedFile=',
+    selectedFile ? 'yes' : 'no',
+  );
+
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.overlayBackground} onPress={onClose} />
@@ -440,6 +480,20 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         <View style={styles.content}>
+          {/* Debug: Show if sessions is empty/missing */}
+          {(!sessions || sessions.length === 0) && (
+            <View
+              style={{
+                padding: 10,
+                backgroundColor: '#fef3c7',
+                marginBottom: 10,
+              }}
+            >
+              <Text>
+                Debug: No sessions found (add session in Sessions tab)
+              </Text>
+            </View>
+          )}
           <View style={styles.dropZone}>
             {selectedFile ? (
               <View style={styles.selectedFileContainer}>
@@ -718,13 +772,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
+    flex: 1,
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -736,7 +792,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1001,
+    zIndex: 10000,
     padding: 20,
   },
   sessionPickerOverlay: {

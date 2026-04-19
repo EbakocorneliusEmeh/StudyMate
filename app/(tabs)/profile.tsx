@@ -1,30 +1,25 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Image,
-  Modal,
-  TextInput,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  TextInput,
+} from 'react-native';
 import { api } from '../../src/api/axiosConfig';
+import { getStats } from '../../src/api/progress';
+import { ProgressStats } from '../../src/types';
 import {
   clearStoredUser,
   getStoredUser,
   removeToken,
   setStoredUser,
 } from '../../src/utils/storage';
-import { getStats } from '../../src/api/progress';
-import { ProgressStats } from '../../src/types';
 
 interface User {
   name: string;
@@ -59,11 +54,10 @@ export default function ProfileScreen() {
       const storedUser = await getStoredUser();
       if (storedUser) {
         setUser({
-          name:
-            storedUser.full_name?.trim() || storedUser.name?.trim() || 'User',
+          name: storedUser.name || '',
           email: storedUser.email || '',
           avatar_url: storedUser.avatar_url || null,
-          full_name: storedUser.full_name || storedUser.name || null,
+          full_name: storedUser.full_name || null,
         });
       } else {
         router.push('/login');

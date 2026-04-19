@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { ApiError, uploadFile } from '../api/upload';
 
 export default function UploadScreen() {
@@ -97,6 +97,8 @@ export default function UploadScreen() {
     }
 
     const asset = result.assets[0];
+    console.log('[UploadScreen] Selected file URI:', asset.uri);
+    console.log('[UploadScreen] Selected file name:', asset.name);
     await uploadToAi(
       asset.uri,
       asset.name,
@@ -133,7 +135,7 @@ export default function UploadScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Upload Study Material</Text>
         <Text style={styles.subtitle}>
-          Choose what you want to upload, then we’ll open it in AI Companion.
+          Choose what you want to upload, then we'll open it in AI Companion.
         </Text>
       </View>
 

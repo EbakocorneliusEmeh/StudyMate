@@ -41,7 +41,7 @@ export const getDocumentStatus = async (
   documentId: string,
 ): Promise<DocumentStatusResponse> => {
   const res = await makeAuthenticatedRequest(
-    `${BACKEND_URL}/api/documents/${documentId}`,
+    `${BACKEND_URL}/search/documents/${documentId}`,
     { method: 'GET' },
   );
 
@@ -55,4 +55,24 @@ export const getDocumentStatus = async (
   }
 
   return data as DocumentStatusResponse;
+};
+
+export const getDocumentChunks = async (
+  documentId: string,
+): Promise<{ chunks: { content: string }[] }> => {
+  const res = await makeAuthenticatedRequest(
+    `${BACKEND_URL}/search/documents/${documentId}/chunks`,
+    { method: 'GET' },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new ApiError(
+      data?.message || 'Failed to fetch document chunks',
+      res.status,
+    );
+  }
+
+  return data as { chunks: { content: string }[] };
 };

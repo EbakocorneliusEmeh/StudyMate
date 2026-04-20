@@ -7,7 +7,7 @@ const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 const GENERATED_QUIZZES_KEY = 'generatedQuizzes';
-const _GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
+const GENERATED_FLASHCARDS_KEY = 'generatedFlashcards';
 const DOCUMENT_SOURCES_KEY = 'documentSources';
 const SESSION_CHAT_PREFIX = 'sessionChatHistory:';
 
@@ -161,9 +161,22 @@ const writeJson = async <T>(key: string, value: T) => {
 export const getGeneratedQuizzes = async (): Promise<GeneratedQuiz[]> =>
   readJson<GeneratedQuiz[]>(GENERATED_QUIZZES_KEY, []);
 
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0;
+    return v.toString(16);
+  });
+};
+
 export const saveGeneratedQuiz = async (quiz: GeneratedQuiz) => {
   const quizzes = await getGeneratedQuizzes();
-  const nextQuizzes = [quiz, ...quizzes.filter((item) => item.id !== quiz.id)];
+  const quizId = quiz.id || generateUUID();
+  const quizWithId = { ...quiz, id: quizId };
+  const nextQuizzes = [
+    quizWithId,
+    ...quizzes.filter((item) => item.id !== quizId),
+  ];
   await writeJson(GENERATED_QUIZZES_KEY, nextQuizzes);
 };
 
@@ -172,6 +185,22 @@ export const getGeneratedQuizById = async (
 ): Promise<GeneratedQuiz | null> => {
   const quizzes = await getGeneratedQuizzes();
   return quizzes.find((quiz) => quiz.id === quizId) ?? null;
+};
+
+export const getGeneratedFlashcards = async (): Promise<FlashcardDeck[]> =>
+  readJson<FlashcardDeck[]>(GENERATED_FLASHCARDS_KEY, []);
+
+export const saveGeneratedFlashcards = async (deck: FlashcardDeck) => {
+  const decks = await getGeneratedFlashcards();
+  const nextDecks = [deck, ...decks.filter((item) => item.id !== deck.id)];
+  await writeJson(GENERATED_FLASHCARDS_KEY, nextDecks);
+};
+
+export const getGeneratedFlashcardsById = async (
+  deckId: string,
+): Promise<FlashcardDeck | null> => {
+  const decks = await getGeneratedFlashcards();
+  return decks.find((deck) => deck.id === deckId) ?? null;
 };
 
 export const getDocumentSources = async (): Promise<DocumentSourceRecord[]> =>

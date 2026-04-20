@@ -9,7 +9,12 @@ import {
   Image,
   Modal,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { api } from '../../src/api/axiosConfig';
 import { getStats } from '../../src/api/progress';
@@ -237,7 +242,9 @@ export default function ProfileScreen() {
         response?: { data?: unknown; status?: number };
         message?: string;
       };
-      const errorData = axiosError.response?.data;
+      const errorData = axiosError.response?.data as
+        | { message?: string }
+        | undefined;
       const errorMessage = axiosError.message || 'Unknown error';
 
       console.error('Update Error:', errorData || errorMessage);

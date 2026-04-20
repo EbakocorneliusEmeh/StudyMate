@@ -40,7 +40,8 @@ export default function RootLayout() {
         <Stack.Screen name="session/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="create-session" options={{ headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-        <Stack.Screen name="chat" options={{ headerShown: false }} />
+        <Stack.Screen name="quiz" options={{ headerShown: false }} />
+        <Stack.Screen name="quiz/[id]" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"
           options={{ presentation: 'modal', title: 'Modal' }}

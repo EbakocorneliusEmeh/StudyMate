@@ -29,7 +29,8 @@ interface QuizResult {
 
 export default function QuizPage() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams();
+  const id = params.id as string | undefined;
 
   const [quiz, setQuiz] = useState<GeneratedQuiz | null>(null);
   const [state, setState] = useState<QuizState>('loading');
@@ -87,13 +88,22 @@ export default function QuizPage() {
   const handleSubmitAnswer = async () => {
     if (!selectedAnswer || !currentQuestion) return;
 
-    const isCorrect = selectedAnswer === currentQuestion.correct_answer;
+    const selectedOption = currentQuestion.options.find(
+      (opt) => opt.id === selectedAnswer,
+    );
+    const correctOption = currentQuestion.options.find(
+      (opt) => opt.id === currentQuestion.correct_answer,
+    );
+
+    const isCorrect =
+      selectedAnswer === currentQuestion.correct_answer ||
+      selectedOption?.text === correctOption?.text;
 
     const result: QuizResult = {
       questionId: currentQuestion.id,
       question: currentQuestion.question,
-      userAnswer: selectedAnswer,
-      correctAnswer: currentQuestion.correct_answer,
+      userAnswer: selectedOption?.text || selectedAnswer,
+      correctAnswer: correctOption?.text || currentQuestion.correct_answer,
       isCorrect,
     };
 

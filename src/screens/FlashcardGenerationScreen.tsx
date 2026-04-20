@@ -22,11 +22,10 @@ import {
   FlashcardChatMessage,
 } from '../types';
 import {
-  generateFlashcardsWithGemini,
-  generateFlashcardsWithGroq,
-  chatAboutFlashcards,
-  regenerateCardWithModification,
-} from '../services/flashcardService';
+  chatAboutFlashcardsFromBackend,
+  generateFlashcardsFromBackend,
+  regenerateFlashcardWithBackend,
+} from '../api/ai';
 
 interface FlashcardGenerationScreenProps {
   visible: boolean;
@@ -133,16 +132,13 @@ export const FlashcardGenerationScreen: React.FC<
 
       setProgress(40);
 
-      let result;
-      try {
-        result = await generateFlashcardsWithGemini(input, (p) =>
-          setProgress(40 + Math.round(p * 0.5)),
-        );
-      } catch {
-        result = await generateFlashcardsWithGroq(input, (p) =>
-          setProgress(40 + Math.round(p * 0.5)),
-        );
-      }
+      const result = await generateFlashcardsFromBackend(
+        {
+          ...input,
+          sessionId: undefined,
+        },
+        (p) => setProgress(40 + Math.round(p * 0.5)),
+      );
 
       setDeck(result.deck);
       setProgress(100);
@@ -175,11 +171,11 @@ export const FlashcardGenerationScreen: React.FC<
     setChatMessages((prev) => [...prev, newUserMsg]);
 
     try {
-      const { response } = await chatAboutFlashcards(
-        userMessage,
+      const { response } = await chatAboutFlashcardsFromBackend({
+        message: userMessage,
         deck,
-        chatMessages,
-      );
+        chatHistory: chatMessages,
+      });
 
       const newAssistantMsg: FlashcardChatMessage = {
         id: `msg-${Date.now()}-assistant`,
@@ -211,7 +207,7 @@ export const FlashcardGenerationScreen: React.FC<
           text: 'Modify',
           onPress: async () => {
             try {
-              const updatedCard = await regenerateCardWithModification(
+              const updatedCard = await regenerateFlashcardWithBackend(
                 cardId,
                 modification,
                 deck,

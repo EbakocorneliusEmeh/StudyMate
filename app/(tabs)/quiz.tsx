@@ -12,32 +12,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getGeneratedQuizzes } from '../../src/utils/storage';
+import { GeneratedQuiz } from '../../src/types';
 
 const difficultyLevels = ['Easy', 'Medium', 'Hard'];
 
-interface Quiz {
-  id: string;
-  title: string;
-  sourceFile: string;
-  questionCount: number;
-  status: 'ready' | 'generating';
-  imageUrl?: string;
-  createdAt: string;
-}
-
-interface RecentUpload {
-  id: string;
-  fileName: string;
-  fileType: 'pdf' | 'docx' | 'image';
-  uploadedAt: string;
-  size: string;
-}
-
 export default function QuizScreen() {
   const router = useRouter();
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [recentUploads, setRecentUploads] = useState<RecentUpload[]>([]);
+  const [quizzes, setQuizzes] = useState<GeneratedQuiz[]>([]);
   const [questionCount] = useState(15);
   const [difficulty, setDifficulty] = useState('Medium');
   const [refreshing, setRefreshing] = useState(false);
@@ -50,15 +32,8 @@ export default function QuizScreen() {
 
   const loadData = async () => {
     try {
-      const storedQuizzes = await AsyncStorage.getItem('generatedQuizzes');
-      const storedUploads = await AsyncStorage.getItem('documentSources');
-
-      if (storedQuizzes) {
-        setQuizzes(JSON.parse(storedQuizzes));
-      }
-      if (storedUploads) {
-        setRecentUploads(JSON.parse(storedUploads).slice(0, 3));
-      }
+      const storedQuizzes = await getGeneratedQuizzes();
+      setQuizzes(storedQuizzes);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -75,27 +50,11 @@ export default function QuizScreen() {
   };
 
   const handleStartQuiz = (quizId: string) => {
-    router.push({
-      pathname: '/quiz/generate',
-      params: { id: quizId },
-    });
+    router.push(`/quiz/${quizId}`);
   };
 
   const handleGenerateNewQuiz = () => {
     router.push('/quiz/generate');
-  };
-
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'pdf':
-        return <Ionicons name="document-text" size={24} color="#ef4444" />;
-      case 'docx':
-        return <Ionicons name="document" size={24} color="#3b82f6" />;
-      case 'image':
-        return <Ionicons name="image" size={24} color="#8b5cf6" />;
-      default:
-        return <Ionicons name="document" size={24} color="#6b7280" />;
-    }
   };
 
   return (
@@ -194,46 +153,16 @@ export default function QuizScreen() {
               </View>
             </View>
 
-            {recentUploads.length > 0 && (
-              <>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Recent Uploads</Text>
-                  <TouchableOpacity>
-                    <Text style={styles.seeAllText}>See all</Text>
-                  </TouchableOpacity>
-                </View>
-                {recentUploads.map((upload) => (
-                  <View key={upload.id} style={styles.uploadItemCard}>
-                    <View style={styles.fileIconContainer}>
-                      {getFileIcon(upload.fileType)}
-                    </View>
-                    <View style={styles.uploadItemInfo}>
-                      <Text style={styles.uploadItemName}>
-                        {upload.fileName}
-                      </Text>
-                      <Text style={styles.uploadItemMeta}>
-                        Uploaded {upload.uploadedAt} • {upload.size}
-                      </Text>
-                    </View>
-                    <TouchableOpacity style={styles.menuButton}>
-                      <Ionicons
-                        name="ellipsis-vertical"
-                        size={20}
-                        color="#6b7280"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            )}
-
             {quizzes.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Generated Quizzes</Text>
                 </View>
-                {quizzes.slice(0, 1).map((quiz) => (
-                  <View key={quiz.id} style={styles.quizCard}>
+                {quizzes.slice(0, 1).map((quiz, index) => (
+                  <View
+                    key={`${quiz.id ?? 'quiz'}-${index}`}
+                    style={styles.quizCard}
+                  >
                     <View style={styles.quizImageContainer}>
                       <View style={styles.quizImagePlaceholder}>
                         <Ionicons name="school" size={48} color="#d1d5db" />
@@ -245,11 +174,11 @@ export default function QuizScreen() {
                     <View style={styles.quizContent}>
                       <Text style={styles.quizTitle}>{quiz.title}</Text>
                       <Text style={styles.quizSubtitle}>
-                        Based on {quiz.sourceFile}
+                        Based on {quiz.fileName}
                       </Text>
                       <View style={styles.questionCountBadge}>
                         <Text style={styles.questionCountBadgeText}>
-                          {quiz.questionCount} Qs
+                          {quiz.questions.length} Qs
                         </Text>
                       </View>
                     </View>

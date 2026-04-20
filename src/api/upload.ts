@@ -3,6 +3,37 @@ import { API_URL } from '../config/api';
 import { getToken, refreshAccessToken } from '../utils/storage';
 
 const BACKEND_URL = API_URL;
+
+const fileToBase64 = async (fileUri: string | File): Promise<string | null> => {
+  if (
+    typeof window !== 'undefined' &&
+    typeof File !== 'undefined' &&
+    fileUri instanceof File
+  ) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64 || null);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(fileUri);
+    });
+  }
+
+  const uri = fileUri as string;
+  const response = await fetch(uri);
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
 export class ApiError extends Error {
   constructor(
     public message: string,

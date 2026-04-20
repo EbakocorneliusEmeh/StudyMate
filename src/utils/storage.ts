@@ -161,9 +161,22 @@ const writeJson = async <T>(key: string, value: T) => {
 export const getGeneratedQuizzes = async (): Promise<GeneratedQuiz[]> =>
   readJson<GeneratedQuiz[]>(GENERATED_QUIZZES_KEY, []);
 
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0;
+    return v.toString(16);
+  });
+};
+
 export const saveGeneratedQuiz = async (quiz: GeneratedQuiz) => {
   const quizzes = await getGeneratedQuizzes();
-  const nextQuizzes = [quiz, ...quizzes.filter((item) => item.id !== quiz.id)];
+  const quizId = quiz.id || generateUUID();
+  const quizWithId = { ...quiz, id: quizId };
+  const nextQuizzes = [
+    quizWithId,
+    ...quizzes.filter((item) => item.id !== quizId),
+  ];
   await writeJson(GENERATED_QUIZZES_KEY, nextQuizzes);
 };
 

@@ -29,7 +29,8 @@ interface QuizResult {
 
 export default function QuizPage() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams();
+  const id = params.id as string | undefined;
 
   const [quiz, setQuiz] = useState<GeneratedQuiz | null>(null);
   const [state, setState] = useState<QuizState>('loading');

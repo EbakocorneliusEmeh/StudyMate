@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   Platform,
+  StyleSheet,
   TextInput,
 } from 'react-native';
 import { api } from '../../src/api/axiosConfig';

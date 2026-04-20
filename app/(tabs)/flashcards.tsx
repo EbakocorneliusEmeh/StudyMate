@@ -29,10 +29,7 @@ import {
   StudySession,
 } from '../../src/api/sessions';
 import { UploadedFile } from '../../src/api/upload';
-import {
-  generateFlashcardsWithGemini,
-  generateFlashcardsWithGroq,
-} from '../../src/services/flashcardService';
+import { generateFlashcardsFromBackend } from '../../src/api/ai';
 import { DocumentSourceRecord, FlashcardDeck } from '../../src/types';
 import {
   hydrateDocumentSourceFromBackend,
@@ -308,52 +305,26 @@ export default function FlashcardsScreen() {
           : null;
       const resolvedSource = hydratedSource || storedSource;
 
-      const fallbackGeminiUri =
-        params.geminiFileUri ||
-        (selectedFile?.file_url &&
-        (selectedFile.file_url.startsWith('gs://') ||
-          selectedFile.file_url.includes('generativelanguage.googleapis.com'))
-          ? selectedFile.file_url
-          : undefined);
-
-      let result;
       console.log('[Flashcard] Starting flashcard generation...');
-
-      // Try Groq first
-      try {
-        console.log('[Flashcard] Trying Groq...');
-        result = await generateFlashcardsWithGroq({
+      const result = await generateFlashcardsFromBackend(
+        {
           numCards,
           fileName,
           sourceText: params.sourceText || resolvedSource?.sourceText,
-        });
-        console.log('[Flashcard] Groq succeeded!');
-      } catch (groqError) {
-        const err = groqError as Error;
-        console.log('[Flashcard] Groq failed:', err.message);
-
-        // Try Gemini last (it has free tier)
-        try {
-          console.log('[Flashcard] Trying Gemini...');
-          result = await generateFlashcardsWithGemini({
-            numCards,
-            fileName,
-            sourceText: params.sourceText || resolvedSource?.sourceText,
-            geminiFileUri: fallbackGeminiUri || resolvedSource?.geminiFileUri,
-            mimeType:
-              params.mimeType ||
-              resolvedSource?.mimeType ||
-              selectedFile?.file_type,
-          });
-          console.log('[Flashcard] Gemini succeeded!');
-        } catch (geminiError) {
-          const err2 = geminiError as Error;
-          console.log('[Flashcard] Gemini failed:', err2.message);
-          throw new Error(
-            `All AI providers failed: Groq(${err.message}), Gemini(${err2.message})`,
-          );
-        }
-      }
+          sessionId: selectedSession?.id || params.sessionId,
+          geminiFileUri: params.geminiFileUri || resolvedSource?.geminiFileUri,
+          mimeType:
+            params.mimeType ||
+            resolvedSource?.mimeType ||
+            selectedFile?.file_type,
+          fileUrl: selectedFile?.file_url,
+          documentId: params.documentId || resolvedSource?.documentId,
+        },
+        (progress) => {
+          setProgressValue(progress);
+        },
+      );
+      console.log('[Flashcard] Backend generation succeeded!');
 
       await saveGeneratedFlashcards(result.deck);
       console.log('[Flashcard] Flashcards saved successfully!');

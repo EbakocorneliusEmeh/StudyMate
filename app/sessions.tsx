@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -7,13 +8,17 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Image,
+  Modal,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { api } from '../src/api/axiosConfig';
 import { SessionCard } from '../components/SessionCard';
 import { deleteSession, getSessions } from '../src/api/sessions';
+import { getStoredUser } from '../src/utils/storage';
 
 interface Session {
   id: string;
@@ -27,9 +32,9 @@ export default function SessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Dynamic user name
-  const userName = 'Mbonleng Ernest';
+  const [userName, setUserName] = useState('User');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -42,9 +47,33 @@ export default function SessionsPage() {
     }
   }, []);
 
-  React.useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+  const loadUserAndAvatar = useCallback(async () => {
+    try {
+      const user = await getStoredUser();
+      const response = await api.get('/profile/me');
+      const profileData = response.data || {};
+      const displayName =
+        profileData.full_name?.trim() ||
+        profileData.name?.trim() ||
+        user?.full_name?.trim() ||
+        user?.name?.trim() ||
+        'User';
+
+      setUserName(displayName);
+      setAvatarUrl(profileData.avatar_url || null);
+    } catch (_error) {
+      const user = await getStoredUser();
+      setUserName(user?.full_name?.trim() || user?.name?.trim() || 'User');
+      setAvatarUrl(user?.avatar_url || null);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchSessions();
+      void loadUserAndAvatar();
+    }, [fetchSessions, loadUserAndAvatar]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -71,12 +100,22 @@ export default function SessionsPage() {
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <TouchableOpacity
-            onPress={() => router.push('/edit-profile')}
+            onPress={() => {
+              if (avatarUrl) {
+                setShowAvatarModal(true);
+                return;
+              }
+              router.push('/(tabs)/profile');
+            }}
             style={styles.avatarContainer}
           >
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={24} color="#7f13ec" />
-            </View>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={24} color="#7f13ec" />
+              </View>
+            )}
           </TouchableOpacity>
           <View>
             <Text style={styles.greeting}>Welcome back,</Text>
@@ -151,7 +190,11 @@ export default function SessionsPage() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={styles.modeChip}
+            activeOpacity={0.9}
+            onPress={() => router.push('/(tabs)/flashcards')}
+          >
             <View
               style={[
                 styles.iconCircle,
@@ -163,7 +206,11 @@ export default function SessionsPage() {
             <Text style={styles.modeLabel}>Flashcards</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={styles.modeChip}
+            activeOpacity={0.9}
+            onPress={() => router.push('/(tabs)/quiz')}
+          >
             <View
               style={[
                 styles.iconCircle,
@@ -175,7 +222,11 @@ export default function SessionsPage() {
             <Text style={styles.modeLabel}>Quiz Mode</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.modeChip} activeOpacity={0.9}>
+          <TouchableOpacity
+            style={styles.modeChip}
+            activeOpacity={0.9}
+            onPress={() => router.push('/ai-companion')}
+          >
             <View
               style={[
                 styles.iconCircle,
@@ -224,6 +275,35 @@ export default function SessionsPage() {
         <Ionicons name="add" size={32} color="white" />
       </TouchableOpacity>
 
+      <Modal
+        visible={showAvatarModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAvatarModal(false)}
+      >
+        <View style={styles.avatarModalOverlay}>
+          <TouchableOpacity
+            style={styles.avatarModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowAvatarModal(false)}
+          />
+          <View style={styles.avatarModalContent}>
+            <TouchableOpacity
+              style={styles.avatarModalClose}
+              onPress={() => setShowAvatarModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            {avatarUrl && (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarModalImage}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* NAVIGATION BAR */}
       <View style={styles.navBar}>
         <TouchableOpacity style={styles.navItem}>
@@ -242,7 +322,7 @@ export default function SessionsPage() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push('/edit-profile')}
+          onPress={() => router.push('/(tabs)/profile')}
         >
           <Ionicons name="person-outline" size={24} color="#94a3b8" />
           <Text style={styles.navLabel}>Profile</Text>
@@ -265,20 +345,61 @@ const styles = StyleSheet.create({
   },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 1.5,
     borderColor: 'rgba(127,19,236,0.2)',
-    padding: 2,
+    padding: 3,
   },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 27,
+    backgroundColor: '#f3f4f6',
+  },
+
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    borderRadius: 20,
+    borderRadius: 27,
     backgroundColor: 'rgba(127,19,236,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  avatarModalContent: {
+    width: '86%',
+    aspectRatio: 1,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+  },
+  avatarModalClose: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(17, 24, 39, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarModalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    backgroundColor: '#111827',
   },
   greeting: { fontSize: 12, fontWeight: '500', color: '#64748b' },
   userNameText: { fontSize: 18, fontWeight: '700', color: '#0f172a' },

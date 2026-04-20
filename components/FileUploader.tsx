@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -6,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { linkFileToSession } from '../src/api/sessions';
 import {
   ApiError,
   deleteFile,
@@ -33,7 +34,10 @@ interface FileUploaderProps {
   visible: boolean;
   onClose: () => void;
   sessions: Session[];
+  initialSessionId?: string;
   onUploadComplete?: (file: UploadedFile, sessionId: string) => void;
+  onUploadSuccess?: (message: string) => void;
+  onUploadError?: (message: string) => void;
 }
 
 type UploadStatus = 'idle' | 'selecting' | 'uploading' | 'success' | 'error';
@@ -42,10 +46,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   visible,
   onClose,
   sessions,
+  initialSessionId,
   onUploadComplete,
+  onUploadSuccess,
+  onUploadError,
 }) => {
   const [selectedFile, setSelectedFile] = useState<{
-    uri: string;
+    uri: string | File;
     name: string;
     type: string;
     size: number;
@@ -63,8 +70,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   React.useEffect(() => {
     if (visible) {
       resetState();
+      if (initialSessionId) {
+        setSelectedSessionId(initialSessionId);
+      } else if (sessions && sessions.length > 0) {
+        setSelectedSessionId(sessions[0].id);
+      }
     }
-  }, [visible]);
+  }, [initialSessionId, sessions, visible]);
 
   const resetState = () => {
     setSelectedFile(null);
@@ -75,7 +87,27 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setSuccessMessage(null);
   };
 
-  const handleSelectFile = async () => {
+  const setValidatedFile = (fileInfo: {
+    uri: string | File;
+    name: string;
+    type: string;
+    size: number;
+  }) => {
+    const validationError = validateFile({
+      type: fileInfo.type,
+      size: fileInfo.size,
+    });
+    if (validationError) {
+      setErrorMessage(validationError);
+      setStatus('error');
+      return;
+    }
+
+    setSelectedFile(fileInfo);
+    setStatus('idle');
+  };
+
+  const handleSelectImage = async () => {
     try {
       setStatus('selecting');
       setErrorMessage(null);
@@ -93,7 +125,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
-        selectionLimit: 1,
+        allowsMultipleSelection: false,
+        legacy: Platform.OS === 'android',
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
@@ -102,32 +135,127 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       }
 
       const asset = result.assets[0];
-
-      const fileInfo = await getFileInfo(asset);
-
-      const validationError = validateFile({
-        type: fileInfo.type,
-        size: fileInfo.size,
-      });
-      if (validationError) {
-        setErrorMessage(validationError);
-        setStatus('error');
-        return;
-      }
-
-      setSelectedFile(fileInfo);
-      setStatus('idle');
-    } catch {
-      setErrorMessage('Failed to select file. Please try again.');
+      const fileInfo = await getImageFileInfo(asset);
+      setValidatedFile(fileInfo);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to select file. Please try again.';
+      setErrorMessage(message);
       setStatus('error');
     }
   };
 
-  const getFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
-    const uri = asset.uri;
-    const name = uri.split('/').pop() || 'file';
+  const handleSelectDocument = async () => {
+    try {
+      setStatus('selecting');
+      setErrorMessage(null);
 
-    let type = 'application/octet-stream';
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'text/plain',
+          'text/markdown',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        setStatus('idle');
+        return;
+      }
+
+      const fileInfo = getDocumentFileInfo(result.assets[0]);
+      setValidatedFile(fileInfo);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to select document. Please try again.';
+      setErrorMessage(message);
+      setStatus('error');
+    }
+  };
+
+  const handleSelectFile = () => {
+    console.log('[FileUploader] handleSelectFile, Platform.OS:', Platform.OS);
+
+    // Detect actual platform - use native mobile pickers on Android/iOS
+    const isNativeMobile = Platform.OS === 'android' || Platform.OS === 'ios';
+    const isWebPlatform = Platform.OS === 'web';
+
+    // On native mobile (Android/iOS), always use native pickers
+    if (isNativeMobile) {
+      console.log('[FileUploader] Using native mobile picker');
+      Alert.alert('Select File Type', 'Choose what you want to upload', [
+        {
+          text: 'Image',
+          onPress: () => {
+            void handleSelectImage();
+          },
+        },
+        {
+          text: 'PDF or Note',
+          onPress: () => {
+            void handleSelectDocument();
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+
+    // For web platform (desktop browser), use file input
+    if (isWebPlatform) {
+      console.log('[FileUploader] Using web file input');
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,.pdf,.txt,.md,.doc,.docx';
+      input.onchange = async (event: Event) => {
+        const target = event.target as HTMLInputElement | null;
+        const file = target?.files?.[0];
+        if (file) {
+          const fileInfo = {
+            uri: file,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+            size: file.size,
+          };
+          setValidatedFile(fileInfo);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    // Fallback for unknown platform - try native pickers anyway
+    console.log('[FileUploader] Unknown platform, using fallback');
+    Alert.alert('Select File Type', 'Choose what you want to upload', [
+      {
+        text: 'Image',
+        onPress: () => {
+          void handleSelectImage();
+        },
+      },
+      {
+        text: 'PDF or Note',
+        onPress: () => {
+          void handleSelectDocument();
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const getImageFileInfo = async (asset: ImagePicker.ImagePickerAsset) => {
+    const uri = asset.uri;
+    const name = asset.fileName || uri.split('/').pop() || 'file';
+
+    let type = asset.mimeType || 'application/octet-stream';
     const extension = name.split('.').pop()?.toLowerCase();
 
     const typeMap: Record<string, string> = {
@@ -155,6 +283,30 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     };
   };
 
+  const getDocumentFileInfo = (asset: DocumentPicker.DocumentPickerAsset) => {
+    let type = asset.mimeType || 'application/octet-stream';
+    const extension = asset.name.split('.').pop()?.toLowerCase();
+
+    const typeMap: Record<string, string> = {
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      md: 'text/markdown',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+
+    if (extension && typeMap[extension]) {
+      type = typeMap[extension];
+    }
+
+    return {
+      uri: asset.uri,
+      name: asset.name,
+      type,
+      size: asset.size || 0,
+    };
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       setErrorMessage('Please select a file first');
@@ -166,44 +318,64 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       return;
     }
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
       setStatus('uploading');
       setProgress(0);
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            if (progressInterval) {
+              clearInterval(progressInterval);
+            }
             return 90;
           }
           return prev + 10;
         });
       }, 200);
 
-      const result = await uploadFile(
+      // Step 1: Upload the file to /api/upload
+      const uploadResult = await uploadFile(
         {
-          uri: selectedFile.uri,
+          uri: selectedFile.uri as string,
           name: selectedFile.name,
           type: selectedFile.type,
         },
+        selectedSessionId,
         `session-${selectedSessionId}`,
       );
 
-      clearInterval(progressInterval);
+      if (!uploadResult.linked_to_session) {
+        await linkFileToSession(
+          selectedSessionId,
+          uploadResult.file_url,
+          uploadResult.file_name,
+          uploadResult.file_type,
+          uploadResult.file_size,
+        );
+      }
+
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       setProgress(100);
       setStatus('success');
-      setSuccessMessage('File uploaded successfully!');
+      const successText = 'File uploaded and linked to session successfully!';
+      setSuccessMessage(successText);
 
       setUploadedFiles((prev) => [
         ...prev,
-        { file: result, sessionId: selectedSessionId },
+        { file: uploadResult, sessionId: selectedSessionId },
       ]);
 
       if (onUploadComplete) {
-        onUploadComplete(result, selectedSessionId);
+        onUploadComplete(uploadResult, selectedSessionId);
       }
+      onUploadSuccess?.(successText);
 
       setTimeout(() => {
         setSelectedFile(null);
@@ -215,12 +387,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       setProgress(0);
       setStatus('error');
 
+      let message = 'Failed to upload file. Please try again.';
       if (error instanceof ApiError) {
-        setErrorMessage(error.message);
+        message = error.message;
       } else if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage('Failed to upload file. Please try again.');
+        message = error.message;
+      }
+      setErrorMessage(message);
+      onUploadError?.(message);
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
       }
     }
   };
@@ -277,14 +454,24 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
+  if (!visible) {
+    return null;
+  }
+
+  // Debug logging
+  console.log(
+    '[FileUploader] Render: sessions=',
+    sessions?.length,
+    'status=',
+    status,
+    'selectedFile=',
+    selectedFile ? 'yes' : 'no',
+  );
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
+    <View style={styles.overlay}>
+      <Pressable style={styles.overlayBackground} onPress={onClose} />
+      <View style={styles.modalContent}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Upload File</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -293,6 +480,20 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         <View style={styles.content}>
+          {/* Debug: Show if sessions is empty/missing */}
+          {(!sessions || sessions.length === 0) && (
+            <View
+              style={{
+                padding: 10,
+                backgroundColor: '#fef3c7',
+                marginBottom: 10,
+              }}
+            >
+              <Text>
+                Debug: No sessions found (add session in Sessions tab)
+              </Text>
+            </View>
+          )}
           <View style={styles.dropZone}>
             {selectedFile ? (
               <View style={styles.selectedFileContainer}>
@@ -338,7 +539,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                       color="#7f13ec"
                     />
                     <Text style={styles.selectTitle}>Tap to select a file</Text>
-                    <Text style={styles.selectSubtitle}>or drag and drop</Text>
+                    <Text style={styles.selectSubtitle}>
+                      Images, PDFs, and note files
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -472,102 +675,139 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         </View>
 
         {/* Session Picker Modal */}
-        <Modal
-          visible={showSessionPicker}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowSessionPicker(false)}
-        >
-          <Pressable
-            style={styles.pickerOverlay}
-            onPress={() => setShowSessionPicker(false)}
-          >
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>Select a Session</Text>
-                <TouchableOpacity onPress={() => setShowSessionPicker(false)}>
-                  <Ionicons name="close" size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-
-              {sessions.length === 0 ? (
-                <View style={styles.emptySessions}>
-                  <Ionicons
-                    name="folder-open-outline"
-                    size={48}
-                    color="#cbd5e1"
-                  />
-                  <Text style={styles.emptyText}>No sessions available</Text>
-                  <Text style={styles.emptySubtext}>
-                    Create a session first to upload files
-                  </Text>
+        {showSessionPicker && (
+          <View style={styles.sessionPickerContainer}>
+            <Pressable
+              style={styles.sessionPickerOverlay}
+              onPress={() => setShowSessionPicker(false)}
+            >
+              <View style={styles.sessionPickerContent}>
+                <View style={styles.pickerHeader}>
+                  <Text style={styles.pickerTitle}>Select a Session</Text>
+                  <TouchableOpacity onPress={() => setShowSessionPicker(false)}>
+                    <Ionicons name="close" size={24} color="#6b7280" />
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                <FlatList
-                  data={sessions}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.sessionItem,
-                        selectedSessionId === item.id &&
-                          styles.sessionItemSelected,
-                      ]}
-                      onPress={() => {
-                        setSelectedSessionId(item.id);
-                        setShowSessionPicker(false);
-                      }}
-                    >
-                      <View style={styles.sessionItemIcon}>
-                        <Ionicons
-                          name="folder"
-                          size={20}
-                          color={
-                            selectedSessionId === item.id
-                              ? '#ffffff'
-                              : '#7f13ec'
-                          }
-                        />
-                      </View>
-                      <View style={styles.sessionItemContent}>
-                        <Text
-                          style={[
-                            styles.sessionItemTitle,
-                            selectedSessionId === item.id &&
-                              styles.sessionItemTitleSelected,
-                          ]}
-                        >
-                          {item.title}
-                        </Text>
-                        {item.subject && (
-                          <Text style={styles.sessionItemSubject}>
-                            {item.subject}
+
+                {sessions.length === 0 ? (
+                  <View style={styles.emptySessions}>
+                    <Ionicons
+                      name="folder-open-outline"
+                      size={48}
+                      color="#cbd5e1"
+                    />
+                    <Text style={styles.emptyText}>No sessions available</Text>
+                    <Text style={styles.emptySubtext}>
+                      Create a session first to upload files
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={sessions}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.sessionItem,
+                          selectedSessionId === item.id &&
+                            styles.sessionItemSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedSessionId(item.id);
+                          setShowSessionPicker(false);
+                        }}
+                      >
+                        <View style={styles.sessionItemIcon}>
+                          <Ionicons
+                            name="folder"
+                            size={20}
+                            color={
+                              selectedSessionId === item.id
+                                ? '#ffffff'
+                                : '#7f13ec'
+                            }
+                          />
+                        </View>
+                        <View style={styles.sessionItemContent}>
+                          <Text
+                            style={[
+                              styles.sessionItemTitle,
+                              selectedSessionId === item.id &&
+                                styles.sessionItemTitleSelected,
+                            ]}
+                          >
+                            {item.title}
                           </Text>
+                          {item.subject && (
+                            <Text style={styles.sessionItemSubject}>
+                              {item.subject}
+                            </Text>
+                          )}
+                        </View>
+                        {selectedSessionId === item.id && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#ffffff"
+                          />
                         )}
-                      </View>
-                      {selectedSessionId === item.id && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color="#ffffff"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  ItemSeparatorComponent={() => (
-                    <View style={styles.separator} />
-                  )}
-                />
-              )}
-            </View>
-          </Pressable>
-        </Modal>
+                      </TouchableOpacity>
+                    )}
+                    ItemSeparatorComponent={() => (
+                      <View style={styles.separator} />
+                    )}
+                  />
+                )}
+              </View>
+            </Pressable>
+          </View>
+        )}
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    maxHeight: '90%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  sessionPickerContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10000,
+    padding: 20,
+  },
+  sessionPickerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sessionPickerContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f7f6f8',

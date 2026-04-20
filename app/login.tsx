@@ -296,10 +296,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../src/api/auth';
-import { removeToken, storeAuthSession } from '../src/utils/storage';
+import {
+  clearStoredUser,
+  removeToken,
+  setStoredUser,
+  storeAuthSession,
+} from '../src/utils/storage';
 
-// FIXED: Using @ts-expect-error as required by your project rules
-// @ts-expect-error - logo path may not be resolved by TS but works in Metro
 import logoImg from '../assets/images/logo.png';
 
 export default function LoginScreen() {
@@ -319,7 +322,8 @@ export default function LoginScreen() {
     try {
       // Clear any old session data first
       await removeToken();
-      await AsyncStorage.multiRemove(['user', 'userId']);
+      await clearStoredUser();
+      await AsyncStorage.removeItem('userId');
 
       const data = await login({ email, password });
 
@@ -328,14 +332,28 @@ export default function LoginScreen() {
       }
 
       // Store tokens and user info
-      await storeAuthSession(data.access_token, data.refresh_token || '');
+      const refreshToken = data.refresh_token || null;
+      await storeAuthSession(data.access_token, refreshToken);
 
       if (data.user) {
-        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        const displayName =
+          data.user.name?.trim() ||
+          data.user.full_name?.trim() ||
+          data.user.email;
+
+        await setStoredUser({
+          id: data.user.id,
+          name: displayName,
+          full_name: data.user.full_name?.trim() || displayName,
+          email: data.user.email,
+        });
         await AsyncStorage.setItem('userId', data.user.id);
       }
 
-      Alert.alert('Success', `Welcome ${data.user?.name || 'Back'}`);
+      Alert.alert(
+        'Success',
+        `Welcome ${data.user?.name || data.user?.full_name || 'Back'}`,
+      );
       router.replace('/sessions');
     } catch (err: unknown) {
       // FIXED: Changed :any to :unknown and added type check

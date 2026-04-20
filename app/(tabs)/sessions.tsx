@@ -422,6 +422,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -429,12 +430,14 @@ import {
   Text,
   View,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CreateSessionForm } from '../../components/CreateSessionForm';
 import { SessionCard } from '../../components/SessionCard';
 import { ApiError, deleteSession, getSessions } from '../../src/api/sessions';
+import { searchApi, SearchFilters } from '../../src/api/search';
 
 interface Session {
   id: string;
@@ -452,6 +455,9 @@ export default function SessionsScreen() {
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Session[]>([]);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -510,6 +516,29 @@ export default function SessionsScreen() {
     fetchSessions();
   };
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const filters: SearchFilters = { query: searchQuery.trim() };
+      const response = await searchApi.search(filters);
+      setSearchResults(response.results);
+    } catch (error) {
+      console.log('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>No sessions yet</Text>
@@ -536,7 +565,7 @@ export default function SessionsScreen() {
         <Text style={styles.headerTitle}>My Sessions</Text>
 
         <TouchableOpacity
-          onPress={() => router.push('/edit-profile')}
+          onPress={() => router.push('/(tabs)/profile')}
           style={styles.profileButton}
           activeOpacity={0.7}
         >
@@ -544,30 +573,83 @@ export default function SessionsScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={sessions}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <CreateSessionForm onSuccess={_handleCreateSuccess} />
-        }
-        renderItem={({ item }) => (
-          <SessionCard
-            session={item}
-            onDelete={handleDeleteSession}
-            onPress={handleSessionPress}
-            isDeleting={deletingSessionId === item.id}
+      <View style={styles.searchBarContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="#9ca3af" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search your materials..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
           />
-        )}
-        ListEmptyComponent={renderEmptyState} // FIXED: Now using the function
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={['#7f13ec']}
-          />
-        }
-      />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={handleSearchClear}>
+              <Ionicons name="close-circle" size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {isSearching ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#7f13ec" />
+        </View>
+      ) : searchQuery.trim() && searchResults.length > 0 ? (
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item, index) => `${item.id || index}`}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.searchResultItem}>
+              <View style={styles.searchResultIcon}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#7f13ec"
+                />
+              </View>
+              <View style={styles.searchResultContent}>
+                <Text style={styles.searchResultTitle}>
+                  {item.title || 'Untitled'}
+                </Text>
+                {item.snippet && (
+                  <Text style={styles.searchResultSnippet} numberOfLines={2}>
+                    {item.snippet}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.resultsList}
+        />
+      ) : (
+        <FlatList
+          data={sessions}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            <CreateSessionForm onSuccess={_handleCreateSuccess} />
+          }
+          renderItem={({ item }) => (
+            <SessionCard
+              session={item}
+              onDelete={handleDeleteSession}
+              onPress={handleSessionPress}
+              isDeleting={deletingSessionId === item.id}
+            />
+          )}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={['#7f13ec']}
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -603,10 +685,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  searchBarContainer: {
+    padding: 12,
+    backgroundColor: '#ffffff',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1f2937',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  resultsList: {
+    padding: 12,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 8,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  searchResultIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(127, 19, 236, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchResultContent: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  searchResultSnippet: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
   },
   list: {
     padding: 16,

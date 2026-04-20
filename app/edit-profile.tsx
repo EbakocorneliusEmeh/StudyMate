@@ -253,6 +253,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { api } from '../src/api/axiosConfig';
+import { getStoredUser, setStoredUser } from '../src/utils/storage';
 
 const EditProfileScreen = () => {
   const router = useRouter();
@@ -334,6 +335,15 @@ const EditProfileScreen = () => {
       // 1. Update Profile Info and Avatar
       await api.post('/profile/update', profileFormData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const currentUser = await getStoredUser();
+      await setStoredUser({
+        id: currentUser?.id,
+        name: fullName.trim(),
+        full_name: fullName.trim(),
+        email: email.trim() || currentUser?.email,
+        avatar_url: image || currentUser?.avatar_url || null,
       });
 
       // 2. Update Email if provided

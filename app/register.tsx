@@ -16,9 +16,12 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { register } from '../src/api/auth';
-import { storeToken, removeToken } from '../src/utils/storage';
+import {
+  removeToken,
+  setStoredUser,
+  storeAuthSession,
+} from '../src/utils/storage';
 import logoImg from '../assets/images/logo.png';
 
 export default function RegisterScreen() {
@@ -57,10 +60,25 @@ export default function RegisterScreen() {
       const data = await register({ name, email, password });
 
       // 2. Storage
-      await storeToken(data.access_token);
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      const refreshToken = data.refresh_token || null;
+      await storeAuthSession(data.access_token, refreshToken);
+      await setStoredUser({
+        id: data.user.id,
+        name:
+          data.user.name?.trim() ||
+          data.user.full_name?.trim() ||
+          data.user.email,
+        full_name:
+          data.user.full_name?.trim() ||
+          data.user.name?.trim() ||
+          data.user.email,
+        email: data.user.email,
+      });
 
-      Alert.alert('Success', `Welcome, ${data.user.name}!`);
+      Alert.alert(
+        'Success',
+        `Welcome, ${data.user.name || data.user.full_name || 'Back'}!`,
+      );
 
       router.replace('/sessions');
     } catch (err: any) {

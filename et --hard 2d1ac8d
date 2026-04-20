@@ -1,0 +1,45 @@
+[33m9e9f761[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfileuploadtochatbot[m[33m, [m[1;31morigin/fileuploadtochatbot[m[33m)[m HEAD@{0}: reset: moving to origin/fileuploadtochatbot
+[33m9e9f761[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfileuploadtochatbot[m[33m, [m[1;31morigin/fileuploadtochatbot[m[33m)[m HEAD@{1}: pull origin fileuploadtochatbot --rebase: Fast-forward
+[33m24e2870[m HEAD@{2}: rebase (abort): returning to refs/heads/fileuploadtochatbot
+[33m2d1ac8d[m HEAD@{3}: commit: Add FlashcardGenerationScreen with multi-modal upload (PDF, Image, Text)
+[33m3c2a359[m HEAD@{4}: commit: Fixed FileUploader modal rendering by adding flex:1 to modalContent style
+[33m672415b[m[33m ([m[1;31morigin/development[m[33m)[m HEAD@{5}: pull origin development (start): checkout 672415b22e780735d3ad0205a8b49e113406f9dc
+[33m24e2870[m HEAD@{6}: checkout: moving from development to fileuploadtochatbot
+[33mb25f880[m[33m ([m[1;32mdevelopment[m[33m)[m HEAD@{7}: rebase (finish): returning to refs/heads/development
+[33mb25f880[m[33m ([m[1;32mdevelopment[m[33m)[m HEAD@{8}: rebase (continue): rerouted edit profile to fall under profile
+[33m672415b[m[33m ([m[1;31morigin/development[m[33m)[m HEAD@{9}: pull origin development (start): checkout 672415b22e780735d3ad0205a8b49e113406f9dc
+[33m894a94e[m HEAD@{10}: checkout: moving from fileuploadtochatbot to development
+[33m24e2870[m HEAD@{11}: commit: commiting to pull
+[33m286e6f8[m HEAD@{12}: reset: moving to HEAD
+[33m286e6f8[m HEAD@{13}: reset: moving to HEAD
+[33m286e6f8[m HEAD@{14}: reset: moving to HEAD
+[33m286e6f8[m HEAD@{15}: reset: moving to HEAD
+[33m286e6f8[m HEAD@{16}: pull origin development: Fast-forward
+[33m7f6d4f9[m HEAD@{17}: checkout: moving from development to fileuploadtochatbot
+[33m894a94e[m HEAD@{18}: pull origin development (finish): returning to refs/heads/development
+[33m894a94e[m HEAD@{19}: pull origin development (pick): rerouted edit profile to fall under profile
+[33m286e6f8[m HEAD@{20}: pull origin development (start): checkout 286e6f81f66cd9ce46ccbcb71ad0c0c9a9d3be37
+[33mf1fc9be[m HEAD@{21}: commit: rerouted edit profile to fall under profile
+[33m7f6d4f9[m HEAD@{22}: checkout: moving from fileuploadtochatbot to development
+[33m7f6d4f9[m HEAD@{23}: reset: moving to origin/development
+[33md4e998a[m HEAD@{24}: rebase (abort): returning to refs/heads/fileuploadtochatbot
+[33m7f6d4f9[m HEAD@{25}: pull origin development (start): checkout 7f6d4f96dc8b4337cbca289843088aa6fbb0743f
+[33md4e998a[m HEAD@{26}: checkout: moving from development to fileuploadtochatbot
+[33m7f6d4f9[m HEAD@{27}: pull origin development: Fast-forward
+[33mec5aad4[m HEAD@{28}: checkout: moving from feature/quizflashai to development
+[33m7694ec1[m[33m ([m[1;31morigin/feature/quizflashai[m[33m, [m[1;32mfeature/quizflashai[m[33m)[m HEAD@{29}: commit: improve on sessioncard design
+[33m6e62610[m HEAD@{30}: commit: improve on flashcard and quiz card design
+[33mec5aad4[m HEAD@{31}: reset: moving to HEAD
+[33mec5aad4[m HEAD@{32}: reset: moving to HEAD
+[33mec5aad4[m HEAD@{33}: checkout: moving from development to feature/quizflashai
+[33mec5aad4[m HEAD@{34}: pull origin development (finish): returning to refs/heads/development
+[33mec5aad4[m HEAD@{35}: pull origin development (start): checkout ec5aad499ffd3cab0aaa214ef8479fa06adb68a6
+[33m2756114[m HEAD@{36}: checkout: moving from fileuploadtochatbot to development
+[33md4e998a[m HEAD@{37}: rebase (abort): returning to refs/heads/fileuploadtochatbot
+[33m07ccf12[m HEAD@{38}: pull origin development (start): checkout 07ccf1236b5b106a629a37f777ada87dd4e1c6e6
+[33md4e998a[m HEAD@{39}: rebase (abort): returning to refs/heads/fileuploadtochatbot
+[33m2756114[m HEAD@{40}: checkout: moving from 07ccf1236b5b106a629a37f777ada87dd4e1c6e6 to development
+[33m07ccf12[m HEAD@{41}: pull origin development: Fast-forward
+[33m1efbf79[m HEAD@{42}: pull origin fileuploadtochatbot (start): checkout 1efbf79ffe75803d32ac98d462c97dfc5de2b2d2
+[33md4e998a[m HEAD@{43}: commit: improve delete design
+[33mba8b431[m HEAD@{44}: commit: Add .env to gitignore

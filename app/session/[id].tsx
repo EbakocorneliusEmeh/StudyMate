@@ -18,6 +18,7 @@ import {
   SessionFile,
   StudySession,
 } from '../../src/api/sessions';
+import { deleteFile, ApiError } from '../../src/api/upload';
 import { findDocumentSource } from '../../src/utils/storage';
 
 export default function SessionDetailScreen() {
@@ -128,6 +129,34 @@ export default function SessionDetailScreen() {
     }
   };
 
+  const handleDeleteFile = async (file: SessionFile, _index: number) => {
+    Alert.alert(
+      'Delete File',
+      `Delete "${file.file_name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFile(file.file_url);
+              // Remove from local state by ID
+              setFiles((prev) => prev.filter((f) => f.id !== file.id));
+              Alert.alert('Success', 'File deleted successfully');
+            } catch (error) {
+              const message =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Failed to delete file';
+              Alert.alert('Error', message);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -205,7 +234,7 @@ export default function SessionDetailScreen() {
             </View>
           ) : files.length > 0 ? (
             <View style={styles.filesList}>
-              {files.map((file) => (
+              {files.map((file, index) => (
                 <TouchableOpacity
                   key={file.id}
                   style={styles.fileItem}
@@ -232,7 +261,20 @@ export default function SessionDetailScreen() {
                       {formatFileSize(file.file_size)}
                     </Text>
                   </View>
-                  <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                  <View style={styles.fileActions}>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => void handleDeleteFile(file, index)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#ef4444"
+                      />
+                    </TouchableOpacity>
+                    <Ionicons name="open-outline" size={20} color="#94a3b8" />
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -431,12 +473,20 @@ const styles = StyleSheet.create({
   fileName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#1e293b',
   },
   fileMeta: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+  },
+  fileActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteButton: {
+    padding: 6,
   },
   uploadButtonContainer: {
     marginTop: 12,

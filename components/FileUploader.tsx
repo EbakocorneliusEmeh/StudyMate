@@ -403,22 +403,30 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const handleDeleteFile = async (fileUrl: string, index: number) => {
-    Alert.alert('Delete File', 'Are you sure you want to delete this file?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteFile(fileUrl);
-            setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-            Alert.alert('Success', 'File deleted successfully');
-          } catch {
-            Alert.alert('Error', 'Failed to delete file');
-          }
+    Alert.alert(
+      'Delete File',
+      'Are you sure you want to delete this file? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFile(fileUrl);
+              setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+              Alert.alert('Success', 'File deleted successfully');
+            } catch (error) {
+              const message =
+                error instanceof ApiError
+                  ? error.message
+                  : 'Failed to delete file';
+              Alert.alert('Error', message);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const getSelectedSessionTitle = () => {
@@ -637,8 +645,12 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
               <Text style={styles.sectionLabel}>Uploaded Files</Text>
               {uploadedFiles.map((item, index) => {
                 const session = sessions.find((s) => s.id === item.sessionId);
+                const key =
+                  item.file.document_id ||
+                  item.file.file_url ||
+                  index.toString();
                 return (
-                  <View key={index} style={styles.uploadedFileItem}>
+                  <View key={key} style={styles.uploadedFileItem}>
                     <Ionicons
                       name={
                         getFileIcon(

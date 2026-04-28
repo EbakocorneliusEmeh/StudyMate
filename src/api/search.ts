@@ -75,17 +75,35 @@ export const searchApi = {
   },
 
   getSessionChatHistory: async (sessionId: string): Promise<any[]> => {
-    const response = await api.get(`/chat/session/${sessionId}/history`);
-    const data = response.data;
-    if (Array.isArray(data)) {
-      return data;
+    const encodedSessionId = encodeURIComponent(sessionId);
+    const endpoints = [
+      `/chat/session/${encodedSessionId}/history`,
+      `/api/chat/session/${encodedSessionId}/history`,
+    ];
+    let lastError: unknown;
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await api.get(endpoint);
+        const data = response.data;
+        if (Array.isArray(data)) {
+          return data;
+        }
+        if (Array.isArray(data?.messages)) {
+          return data.messages;
+        }
+        if (Array.isArray(data?.history)) {
+          return data.history;
+        }
+        return [];
+      } catch (error) {
+        lastError = error;
+        // Try next endpoint
+      }
     }
-    if (Array.isArray(data?.messages)) {
-      return data.messages;
-    }
-    if (Array.isArray(data?.history)) {
-      return data.history;
-    }
-    return [];
+
+    // All endpoints failed
+    console.debug('Session chat history fetch failed on all endpoints.');
+    throw lastError;
   },
 };

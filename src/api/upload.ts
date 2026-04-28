@@ -4,36 +4,6 @@ import { getToken, refreshAccessToken } from '../utils/storage';
 
 const BACKEND_URL = API_URL;
 
-const fileToBase64 = async (fileUri: string | File): Promise<string | null> => {
-  if (
-    typeof window !== 'undefined' &&
-    typeof File !== 'undefined' &&
-    fileUri instanceof File
-  ) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64 || null);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(fileUri);
-    });
-  }
-
-  const uri = fileUri as string;
-  const response = await fetch(uri);
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-};
-
 export class ApiError extends Error {
   constructor(
     public message: string,
@@ -157,57 +127,93 @@ export const uploadFile = async (
   sessionId?: string,
   folder?: string,
 ): Promise<UploadedFile> => {
-  const _isWeb =
-    typeof window !== 'undefined' &&
-    typeof File !== 'undefined' &&
-    file.uri instanceof File;
+  console.log('[Upload] Starting upload:', {
+    fileName: file.name,
+    fileType: file.type,
+    sessionId,
+    folder,
+  });
 
-  // ALWAYS use JSON endpoint for string URIs (works everywhere)
-  if (true) {
-    try {
-      console.log('[Upload] Using JSON endpoint for:', file.name);
-
-      let token = await getToken();
-      if (!token) {
-        token = await AsyncStorage.getItem('access_token');
-      }
-      console.log('[Upload] Token exists:', !!token);
-
-      const base64 = await fileToBase64(file.uri);
-      console.log('[Upload] Base64 length:', base64?.length);
-
-      if (!base64) {
-        throw new ApiError('Failed to read file', 500);
-      }
-
-      const response = await fetch(`${BACKEND_URL}/api/upload/json`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          fileData: base64,
-          fileName: file.name,
-          fileType: file.type,
-          folder,
-          session_id: sessionId,
-        }),
-      });
-
-      console.log('[Upload] Response status:', response.status);
-      const data = await response.json();
-      console.log('[Upload] Response data:', JSON.stringify(data));
-
-      if (!response.ok) {
-        throw new ApiError(data.message || 'Upload failed', response.status);
-      }
-
-      return normalizeUploadedFile(data, file, false);
-    } catch (e) {
-      console.log('[Upload] Error:', e);
-      throw new ApiError(e instanceof Error ? e.message : 'Upload failed', 500);
+  try {
+    let token = await getToken();
+    if (!token) {
+      token = await AsyncStorage.getItem('access_token');
     }
+    console.log('[Upload] Token exists:', !!token);
+
+    if (!token) {
+      throw new ApiError('Not authenticated. Please log in.', 401);
+    }
+
+    // Create FormData - this handles both file:// URIs and File objects
+    const formData = new FormData();
+
+    if (file.uri instanceof File) {
+      // Web: File object
+      formData.append('file', file.uri);
+    } else {
+      // React Native: string URI
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      } as any);
+    }
+
+    if (sessionId) {
+      formData.append('session_id', sessionId);
+    }
+    if (folder) {
+      formData.append('folder', folder);
+    }
+
+    console.log(
+      '[Upload] Sending multipart/form-data to:',
+      `${BACKEND_URL}/api/upload`,
+    );
+
+    const response = await fetch(`${BACKEND_URL}/api/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Note: DO NOT set Content-Type for FormData - fetch sets it automatically with boundary
+      },
+      body: formData,
+    });
+
+    console.log('[Upload] Response status:', response.status);
+    console.log('[Upload] Response status text:', response.statusText);
+
+    let data;
+    try {
+      data = await response.json();
+      console.log(
+        '[Upload] Response data (truncated):',
+        JSON.stringify(data).slice(0, 200),
+      );
+    } catch (parseError) {
+      console.error('[Upload] Failed to parse response JSON:', parseError);
+      const text = await response.text();
+      console.log('[Upload] Raw response text:', text.slice(0, 200));
+      throw new ApiError('Invalid response from server', response.status);
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        data?.message ||
+          data?.error ||
+          `Upload failed with status ${response.status}`,
+        response.status,
+      );
+    }
+
+    return normalizeUploadedFile(data, file, false);
+  } catch (e) {
+    console.error('[Upload] Caught exception:', e);
+    if (e instanceof ApiError) {
+      throw e;
+    }
+    throw new ApiError(e instanceof Error ? e.message : 'Upload failed', 500);
   }
 };
 

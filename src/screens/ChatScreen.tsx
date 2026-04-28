@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  Animated,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
@@ -74,6 +75,101 @@ export default function ChatScreen() {
       Alert.alert('Error', 'Could not copy the response.');
     }
   };
+
+  // Typing indicator dots animation
+  const dotAnim1 = useRef(new Animated.Value(0)).current;
+  const dotAnim2 = useRef(new Animated.Value(0)).current;
+  const dotAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animateDot = (anim: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
+    };
+    animateDot(dotAnim1, 0);
+    animateDot(dotAnim2, 150);
+    animateDot(dotAnim3, 300);
+  }, []);
+
+  const renderTypingIndicator = () => (
+    <View style={styles.messageWrapper}>
+      <View style={styles.aiAvatarRow}>
+        <View style={styles.aiIconCircle}>
+          <MaterialCommunityIcons
+            name="star-four-points"
+            size={12}
+            color="white"
+          />
+        </View>
+        <Text style={styles.aiNameText}>StudyMate AI</Text>
+      </View>
+      <View style={[styles.bubble, styles.aiBubble, styles.typingBubble]}>
+        <View style={styles.typingDotsRow}>
+          <Animated.View
+            style={[
+              styles.typingDot,
+              {
+                transform: [
+                  {
+                    scale: dotAnim1.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.3],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.typingDot,
+              {
+                transform: [
+                  {
+                    scale: dotAnim2.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.3],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.typingDot,
+              {
+                transform: [
+                  {
+                    scale: dotAnim3.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.3],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        </View>
+        <Text style={[styles.msgText, styles.aiMsgText, styles.typingText]}>
+          AI is thinking
+        </Text>
+      </View>
+    </View>
+  );
 
   const handleBack = () => {
     if (sessionId) {
@@ -157,15 +253,24 @@ export default function ChatScreen() {
     setInput('');
     setLoading(true);
 
+    // Add typing indicator to messages
+    const typingId = `typing-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: typingId, isTyping: true, fromUser: false },
+    ]);
+
     if (sessionId) {
       await appendSessionChatMessage(sessionId, userMsg);
     }
 
     try {
-      const history = messages.map((m) => ({
-        role: m.fromUser ? 'user' : 'model',
-        parts: [{ text: m.text }],
-      }));
+      const history = messages
+        .filter((m) => !m.isTyping)
+        .map((m) => ({
+          role: m.fromUser ? 'user' : 'model',
+          content: m.text,
+        }));
 
       const response = documentId
         ? await searchApi.sendCompanionMessage({
@@ -189,8 +294,9 @@ export default function ChatScreen() {
         (typeof responseData.message === 'string' && responseData.message) ||
         'No response received.';
 
+      // Remove typing indicator and add AI response
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => m.id !== typingId),
         {
           id: (Date.now() + 1).toString(),
           text: replyText,
@@ -207,6 +313,8 @@ export default function ChatScreen() {
       }
     } catch (err) {
       console.error('Companion chat failed:', err);
+      // Remove typing indicator on error
+      setMessages((prev) => prev.filter((m) => m.id !== typingId));
       const errorMessage =
         err && typeof err === 'object' && 'response' in err
           ? (err as any).response?.data?.message ||
@@ -293,52 +401,59 @@ export default function ChatScreen() {
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.messageWrapper,
-              item.fromUser ? styles.userWrapper : styles.aiWrapper,
-            ]}
-          >
-            {!item.fromUser && (
-              <View style={styles.aiAvatarRow}>
-                <View style={styles.aiIconCircle}>
-                  <MaterialCommunityIcons
-                    name="star-four-points"
-                    size={12}
-                    color="white"
-                  />
-                </View>
-                <Text style={styles.aiNameText}>StudyMate AI</Text>
-              </View>
-            )}
+        renderItem={({ item }) => {
+          // Render typing indicator
+          if (item.isTyping) {
+            return renderTypingIndicator();
+          }
+
+          return (
             <View
               style={[
-                styles.bubble,
-                item.fromUser ? styles.userBubble : styles.aiBubble,
+                styles.messageWrapper,
+                item.fromUser ? styles.userWrapper : styles.aiWrapper,
               ]}
             >
               {!item.fromUser && (
-                <Pressable
-                  onPress={() => void copyAiMessage(item.text)}
-                  style={styles.copyBtn}
-                  accessibilityLabel="Copy AI response"
-                >
-                  <Ionicons name="copy-outline" size={16} color="#7f13ec" />
-                </Pressable>
+                <View style={styles.aiAvatarRow}>
+                  <View style={styles.aiIconCircle}>
+                    <MaterialCommunityIcons
+                      name="star-four-points"
+                      size={12}
+                      color="white"
+                    />
+                  </View>
+                  <Text style={styles.aiNameText}>StudyMate AI</Text>
+                </View>
               )}
-              <Text
+              <View
                 style={[
-                  styles.msgText,
-                  item.fromUser ? styles.userMsgText : styles.aiMsgText,
+                  styles.bubble,
+                  item.fromUser ? styles.userBubble : styles.aiBubble,
                 ]}
               >
-                {item.text}
-              </Text>
+                {!item.fromUser && (
+                  <Pressable
+                    onPress={() => void copyAiMessage(item.text)}
+                    style={styles.copyBtn}
+                    accessibilityLabel="Copy AI response"
+                  >
+                    <Ionicons name="copy-outline" size={16} color="#7f13ec" />
+                  </Pressable>
+                )}
+                <Text
+                  style={[
+                    styles.msgText,
+                    item.fromUser ? styles.userMsgText : styles.aiMsgText,
+                  ]}
+                >
+                  {item.text}
+                </Text>
+              </View>
+              {item.fromUser && <Text style={styles.readStatus}>Read</Text>}
             </View>
-            {item.fromUser && <Text style={styles.readStatus}>Read</Text>}
-          </View>
-        )}
+          );
+        }}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <Text style={styles.timestamp}>TODAY • 10:42 AM</Text>
@@ -623,6 +738,31 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   readStatus: { fontSize: 10, color: '#94a3b8', marginTop: 4, marginRight: 4 },
+
+  // Typing Indicator
+  typingBubble: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    minWidth: 140,
+  },
+  typingDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#7f13ec',
+  },
+  typingText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
+  },
 
   // Footer / Input (The "Floating Jewel" Principle)
   footer: {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StudySession } from '../src/api/sessions';
 
 interface SessionCardProps {
@@ -28,9 +29,15 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -69,36 +76,52 @@ export const SessionCard: React.FC<SessionCardProps> = ({
       <TouchableOpacity
         style={styles.card}
         onPress={() => onPress?.(session.id)}
-        activeOpacity={0.7}
+        activeOpacity={0.82}
       >
-        <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={2}>
-            {session.title}
-          </Text>
-          {session.subject && (
-            <Text style={styles.subject} numberOfLines={1}>
-              Subject: {session.subject}
-            </Text>
-          )}
-          <Text style={styles.date}>
-            Created: {formatDate(session.created_at)}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.deleteButton,
-            isCurrentlyDeleting && styles.deleteButtonDisabled,
-          ]}
-          onPress={handleDeletePress}
-          activeOpacity={0.7}
-          disabled={isCurrentlyDeleting}
-        >
-          {isCurrentlyDeleting ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+        <View style={styles.cardHeader}>
+          {session.subject ? (
+            <View style={styles.subjectBadge}>
+              <Text style={styles.subjectText}>{session.subject}</Text>
+            </View>
           ) : (
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <View style={styles.subjectBadgeGhost} />
           )}
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleDeletePress}
+            activeOpacity={0.8}
+            disabled={isCurrentlyDeleting}
+          >
+            {isCurrentlyDeleting ? (
+              <ActivityIndicator size="small" color="#ef4444" />
+            ) : (
+              <Ionicons name="trash-outline" size={18} color="#94a3b8" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.title} numberOfLines={2}>
+          {session.title}
+        </Text>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={14} color="#64748b" />
+            <Text style={styles.metaText}>
+              {formatDate(session.created_at)}
+            </Text>
+          </View>
+
+          <View style={styles.dotSeparator} />
+
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={14} color="#64748b" />
+            <Text style={styles.metaText}>
+              {formatTime(session.created_at)}
+            </Text>
+          </View>
+        </View>
       </TouchableOpacity>
 
       <Modal
@@ -109,9 +132,13 @@ export const SessionCard: React.FC<SessionCardProps> = ({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Delete Session</Text>
+            <View style={styles.warningIconContainer}>
+              <Ionicons name="alert-circle" size={32} color="#ef4444" />
+            </View>
+            <Text style={styles.modalTitle}>Delete Session?</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to delete this session?
+              This action cannot be undone. All session data will be permanently
+              removed.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -143,117 +170,149 @@ export const SessionCard: React.FC<SessionCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  content: {
-    flex: 1,
-    marginRight: 12,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  subjectBadge: {
+    maxWidth: '78%',
+    backgroundColor: 'rgba(127, 19, 236, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  subjectBadgeGhost: {
+    width: 24,
+    height: 24,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+    fontFamily: 'Lexend',
+    marginBottom: 12,
   },
-  subject: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
+  subjectText: {
+    color: '#7f13ec',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Lexend',
+    textTransform: 'uppercase',
   },
-  date: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  deleteButton: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    minWidth: 80,
+  iconButton: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButtonDisabled: {
-    backgroundColor: '#f87171',
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 12,
   },
-  deleteButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Lexend',
+    fontWeight: '400',
+  },
+  dotSeparator: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#cbd5e1',
+    marginHorizontal: 10,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   modalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 28,
     padding: 24,
-    width: '80%',
-    maxWidth: 320,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  warningIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fef2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 12,
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#0f172a',
+    fontFamily: 'Lexend',
+    marginBottom: 8,
   },
   modalMessage: {
-    fontSize: 16,
-    color: '#4b5563',
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Lexend',
     textAlign: 'center',
     marginBottom: 24,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
+    width: '100%',
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    minHeight: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f3f4f6',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    backgroundColor: '#f1f5f9',
   },
   cancelButtonText: {
-    color: '#4b5563',
-    fontWeight: '600',
-    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '700',
+    fontFamily: 'Lexend',
+    fontSize: 14,
   },
   deleteModalButton: {
     backgroundColor: '#ef4444',
   },
   deleteModalButtonText: {
     color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Lexend',
+    fontSize: 14,
   },
 });

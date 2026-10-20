@@ -94,15 +94,13 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7a127aac-642e-4783-94be-d194ff3285ec"
+        "projectId": "edfcbb63-dd36-46f8-9192-30fb67b2df09"
       }
     },
-    "owner": "ebakoemeh",
+    "owner": "ebakocornelius",
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/7a127aac-642e-4783-94be-d194ff3285ec"
-    }
+    "updates": {}
   }
 }

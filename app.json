@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "study-mobile",
-    "slug": "study-mobile",
+    "slug": "study-mate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,6 +12,10 @@
       "bundleIdentifier": "com.anonymous.studymobile",
       "infoPlist": {
         "CFBundleURLTypes": [
+          {
+            "CFBundleTypeRole": "Editor",
+            "CFBundleURLSchemes": ["studymobile"]
+          },
           {
             "CFBundleTypeRole": "Editor",
             "CFBundleURLSchemes": ["studymobile"]
@@ -54,6 +58,9 @@
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES"
       ]
     },
@@ -75,11 +82,27 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7a127aac-642e-4783-94be-d194ff3285ec"
+      }
+    },
+    "owner": "ebakoemeh",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7a127aac-642e-4783-94be-d194ff3285ec"
     }
   }
 }

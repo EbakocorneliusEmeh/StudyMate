@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  SafeAreaView,
   StyleSheet,
   View,
   Text,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CreateSessionForm } from '../components/CreateSessionForm';
@@ -200,7 +200,11 @@ export default function CreateSessionPage() {
           )}
 
           {/* New Form Design */}
-          <CreateSessionForm onSuccess={() => router.replace('/sessions')} />
+          <CreateSessionForm
+            onSuccess={(session) => {
+              router.push(`/session/${session.id}`);
+            }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

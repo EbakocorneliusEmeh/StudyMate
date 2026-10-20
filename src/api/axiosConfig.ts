@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/api';
-import { getRefreshToken, getToken, removeToken } from '../utils/storage';
+import { getToken, refreshAccessToken, removeToken } from '../utils/storage';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -11,10 +11,12 @@ api.interceptors.request.use(
   async (config) => {
     const token = await getToken();
     if (token) {
+      config.headers = config.headers ?? {};
       config.headers.Authorization = `Bearer ${token}`;
     }
 
     if (!(config.data instanceof FormData)) {
+      config.headers = config.headers ?? {};
       config.headers['Content-Type'] = 'application/json';
     }
 
@@ -48,14 +50,18 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const refreshToken = await getRefreshToken();
-        if (refreshToken) {
-          // Token refresh logic would go here
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          originalRequest.headers = originalRequest.headers ?? {};
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
         }
-      } catch (_refreshError) {
-        // FIXED: Added underscore to avoid ESLint error
-        await removeToken();
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
       }
+
+      await removeToken();
+      return Promise.reject(new Error('Session expired. Please log in again.'));
     }
 
     return Promise.reject(error);

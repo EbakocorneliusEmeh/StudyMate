@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, {
@@ -336,6 +337,14 @@ export default function FlashcardsScreen() {
       stopProgress();
       showToast('Flashcards generated successfully!', 'Flashcards Ready');
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Flashcard generation API response:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          url: error.config?.url,
+          method: error.config?.method,
+        });
+      }
       console.error('Failed to generate flashcards:', error);
       stopProgress();
       showToast(

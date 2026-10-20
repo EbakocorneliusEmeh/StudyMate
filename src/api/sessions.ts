@@ -442,6 +442,41 @@ const makeAuthenticatedRequest = async (
   return res;
 };
 
+const parseResponseBody = async (res: Response): Promise<unknown> => {
+  const text = await res.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+const getErrorMessage = (data: unknown, fallback: string): string => {
+  if (typeof data === 'string' && data.trim()) {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>;
+    const message = record.message || record.error;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallback;
+};
+
+const logBackendFailure = (operation: string, res: Response, data: unknown) => {
+  console.error(`[${operation}] backend response:`, {
+    status: res.status,
+    statusText: res.statusText,
+    data,
+  });
+};
+
 export const createSession = async (
   title: string,
   subject?: string,
@@ -456,17 +491,14 @@ export const createSession = async (
       },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
-      const errorMsg =
-        data?.message || data?.error || 'Failed to create session';
-      throw new ApiError(errorMsg, res.status);
+      logBackendFailure('createSession', res, data);
+      throw new ApiError(
+        getErrorMessage(data, 'Failed to create session'),
+        res.status,
+      );
     }
 
     return data;
@@ -487,23 +519,19 @@ export const getSessions = async (): Promise<StudySessionListResponse> => {
       { method: 'GET' },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
       if (res.status === 401) {
         throw new ApiError('Session expired. Please log in again.', 401);
       }
+      logBackendFailure('getSessions', res, data);
       throw new ApiError(
-        data?.message || 'Failed to fetch sessions',
+        getErrorMessage(data, 'Failed to fetch sessions'),
         res.status,
       );
     }
-    return data;
+    return data as StudySessionListResponse;
   } catch (error) {
     throw error instanceof ApiError
       ? error
@@ -518,23 +546,19 @@ export const getSession = async (id: string): Promise<StudySession> => {
       { method: 'GET' },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
       if (res.status === 401) {
         throw new ApiError('Session expired. Please log in again.', 401);
       }
+      logBackendFailure('getSession', res, data);
       throw new ApiError(
-        data?.message || 'Failed to fetch session',
+        getErrorMessage(data, 'Failed to fetch session'),
         res.status,
       );
     }
-    return data;
+    return data as StudySession;
   } catch (error) {
     throw error instanceof ApiError
       ? error
@@ -551,20 +575,16 @@ export const deleteSession = async (
       { method: 'DELETE' },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
+      logBackendFailure('deleteSession', res, data);
       throw new ApiError(
-        data?.message || 'Failed to delete session',
+        getErrorMessage(data, 'Failed to delete session'),
         res.status,
       );
     }
-    return data;
+    return data as { message: string };
   } catch (error) {
     throw error instanceof ApiError
       ? error
@@ -581,17 +601,16 @@ export const getSessionFiles = async (
       { method: 'GET' },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
-      throw new ApiError(data?.message || 'Failed to fetch files', res.status);
+      logBackendFailure('getSessionFiles', res, data);
+      throw new ApiError(
+        getErrorMessage(data, 'Failed to fetch files'),
+        res.status,
+      );
     }
-    return data.files || [];
+    return (data as { files?: SessionFile[] })?.files || [];
   } catch (error) {
     throw error instanceof ApiError
       ? error
@@ -621,17 +640,16 @@ export const linkFileToSession = async (
       },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
-      throw new ApiError(data?.message || 'Failed to link file', res.status);
+      logBackendFailure('linkFileToSession', res, data);
+      throw new ApiError(
+        getErrorMessage(data, 'Failed to link file'),
+        res.status,
+      );
     }
-    return data;
+    return data as SessionFile;
   } catch (error) {
     throw error instanceof ApiError
       ? error
@@ -649,17 +667,16 @@ export const unlinkFileFromSession = async (
       { method: 'DELETE' },
     );
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (_e) {
-      throw new ApiError('Invalid response from server');
-    }
+    const data = await parseResponseBody(res);
 
     if (!res.ok) {
-      throw new ApiError(data?.message || 'Failed to unlink file', res.status);
+      logBackendFailure('unlinkFileFromSession', res, data);
+      throw new ApiError(
+        getErrorMessage(data, 'Failed to unlink file'),
+        res.status,
+      );
     }
-    return data;
+    return data as { message: string };
   } catch (error) {
     throw error instanceof ApiError
       ? error

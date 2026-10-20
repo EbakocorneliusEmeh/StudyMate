@@ -251,9 +251,14 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../src/api/axiosConfig';
 import { getStoredUser, setStoredUser } from '../src/utils/storage';
+
+const PRIMARY = '#7f13ec';
+const PRIMARY_DARK = '#5b0fb0';
 
 const EditProfileScreen = () => {
   const router = useRouter();
@@ -400,144 +405,293 @@ const EditProfileScreen = () => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-      </View>
-
-      <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.avatarImage} />
-        ) : (
-          <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
-            <Text style={{ color: '#999' }}>No Photo</Text>
-          </View>
-        )}
-        <Text style={styles.changePhotoText}>Change Profile Picture</Text>
-      </TouchableOpacity>
-
-      <View style={styles.form}>
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          value={fullName}
-          onChangeText={setFullName}
-          style={styles.input}
-          placeholder="e.g. Cornelius"
-        />
-
-        <Text style={styles.label}>Update Email (Optional)</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-          placeholder="New email address"
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          value={bio}
-          onChangeText={setBio}
-          style={[styles.input, styles.bioInput]}
-          multiline
-          placeholder="What are you studying lately?"
-        />
-
-        <Text style={styles.label}>Learning Goal</Text>
-        <TextInput
-          value={learningGoal}
-          onChangeText={setLearningGoal}
-          style={styles.input}
-          placeholder="e.g. Master NestJS"
-        />
-
-        <Text style={styles.label}>Study Level</Text>
-        <TextInput
-          value={studyLevel}
-          onChangeText={setStudyLevel}
-          style={styles.input}
-          placeholder="e.g. Senior Student"
-        />
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            loading ? styles.buttonDisabled : null, // Safer conditional styling
-          ]}
-          onPress={handleUpdate}
-          disabled={loading}
-          activeOpacity={0.7}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={['#f6efff', '#f8fafc', '#ffffff']}
+          style={styles.hero}
         >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.buttonText}>Save Changes</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <Text style={styles.kicker}>PROFILE</Text>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerSubtitle}>
+            Keep your study identity polished and up to date.
+          </Text>
+        </LinearGradient>
+
+        <View style={styles.avatarCard}>
+          <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
+            <View style={styles.avatarRing}>
+              {image ? (
+                <Image source={{ uri: image }} style={styles.avatarImage} />
+              ) : (
+                <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                  <Text style={styles.avatarFallback}>No Photo</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.changePhotoText}>Change profile picture</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formCard}>
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTitle}>Identity</Text>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              style={styles.input}
+              placeholder="e.g. Cornelius"
+              placeholderTextColor="#94a3b8"
+            />
+
+            <Text style={styles.label}>Update Email (Optional)</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              style={styles.input}
+              placeholder="New email address"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTitle}>About You</Text>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              style={[styles.input, styles.bioInput]}
+              multiline
+              placeholder="What are you studying lately?"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionTitle}>Study Profile</Text>
+            <Text style={styles.label}>Learning Goal</Text>
+            <TextInput
+              value={learningGoal}
+              onChangeText={setLearningGoal}
+              style={styles.input}
+              placeholder="e.g. Master NestJS"
+              placeholderTextColor="#94a3b8"
+            />
+
+            <Text style={styles.label}>Study Level</Text>
+            <TextInput
+              value={studyLevel}
+              onChangeText={setStudyLevel}
+              style={styles.input}
+              placeholder="e.g. Senior Student"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.buttonShadow,
+              loading ? styles.buttonDisabledShadow : null,
+            ]}
+            onPress={handleUpdate}
+            disabled={loading}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={
+                loading ? ['#c4b5fd', '#a78bfa'] : [PRIMARY, PRIMARY_DARK]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.button}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <>
+                  <View style={styles.buttonDot} />
+                  <Text style={styles.buttonText}>Save Changes</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  scrollContent: { paddingBottom: 60 },
-  header: { marginTop: 50, alignItems: 'center', marginBottom: 10 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
-  avatarContainer: { alignItems: 'center', marginVertical: 20 },
+  container: { flex: 1, backgroundColor: '#f7f6f8' },
+  scrollView: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  hero: {
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 26,
+    paddingBottom: 22,
+    marginTop: 8,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#ede9fe',
+  },
+  kicker: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2.4,
+    color: PRIMARY,
+    marginBottom: 10,
+  },
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#0f172a',
+    fontFamily: 'Lexend',
+  },
+  headerSubtitle: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#64748b',
+    fontFamily: 'Lexend',
+  },
+  avatarCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    paddingVertical: 24,
+    marginBottom: 18,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  avatarContainer: { alignItems: 'center' },
+  avatarRing: {
+    width: 138,
+    height: 138,
+    borderRadius: 69,
+    padding: 5,
+    backgroundColor: '#ede9fe',
+  },
   avatarImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#f0f0f0',
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: '#f1f5f9',
   },
   avatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#d8b4fe',
     borderStyle: 'dashed',
   },
-  changePhotoText: {
-    color: '#007AFF',
-    marginTop: 12,
-    fontWeight: '600',
-    fontSize: 15,
+  avatarFallback: {
+    color: '#7c3aed',
+    fontWeight: '700',
+    fontFamily: 'Lexend',
   },
-  form: { paddingHorizontal: 25 },
+  changePhotoText: {
+    color: PRIMARY,
+    marginTop: 14,
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: 'Lexend',
+  },
+  formCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    padding: 18,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  sectionBlock: {
+    marginBottom: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+    color: PRIMARY,
+    marginBottom: 14,
+    fontFamily: 'Lexend',
+  },
   label: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 15,
-    marginBottom: 5,
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#334155',
+    marginTop: 8,
+    marginBottom: 8,
+    fontWeight: '700',
+    fontFamily: 'Lexend',
   },
   input: {
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#f0f0f0',
-    paddingVertical: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#333',
+    color: '#0f172a',
+    fontFamily: 'Lexend',
+    marginBottom: 6,
   },
-  bioInput: { height: 70, textAlignVertical: 'top' },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 18,
-    borderRadius: 15,
-    marginTop: 40,
+  bioInput: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+  buttonShadow: {
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginTop: 20,
+    borderRadius: 20,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
   },
-  buttonDisabled: { backgroundColor: '#b3d7ff' },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  buttonDisabledShadow: {
+    shadowOpacity: 0.12,
+  },
+  button: {
+    width: '100%',
+    minHeight: 60,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  buttonDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    fontFamily: 'Lexend',
+  },
 });
 
 export default EditProfileScreen;

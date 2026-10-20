@@ -1,5 +1,9 @@
 import { api } from './axiosConfig';
 import {
+  generateFlashcardsWithGemini,
+  generateFlashcardsWithGroq,
+} from '../services/flashcardService';
+import {
   FlashcardChatMessage,
   FlashcardDeck,
   GeneratedFlashcard,
@@ -122,14 +126,80 @@ export const generateQuizFromBackend = async (
   return normalizeQuizResponse(response.data);
 };
 
+const generateFlashcardsWithFallback = async (
+  input: GenerateFlashcardsRequest,
+  onProgress?: (progress: number) => void,
+): Promise<{ deck: FlashcardDeck }> => {
+  const fallbackStrategies = [
+    generateFlashcardsWithGemini,
+    generateFlashcardsWithGroq,
+  ];
+
+  let lastError: unknown;
+
+  for (const strategy of fallbackStrategies) {
+    try {
+      onProgress?.(15);
+      const result = await strategy(
+        {
+          numCards: input.numCards,
+          fileName: input.fileName,
+          sessionId: input.sessionId,
+          sourceText: input.sourceText,
+          geminiFileUri: input.geminiFileUri,
+          mimeType: input.mimeType,
+        },
+        onProgress,
+      );
+      return { deck: result.deck };
+    } catch (error) {
+      lastError = error;
+      console.warn('Flashcard fallback generation failed:', error);
+    }
+  }
+
+  throw lastError ?? new Error('Flashcard generation failed.');
+};
+
 export const generateFlashcardsFromBackend = async (
   input: GenerateFlashcardsRequest,
   onProgress?: (progress: number) => void,
 ): Promise<{ deck: FlashcardDeck }> => {
   onProgress?.(10);
-  const response = await api.post('/flashcards/generate', input);
-  onProgress?.(100);
-  return normalizeFlashcardResponse(response.data);
+
+  try {
+    const response = await api.post('/flashcards/generate', input);
+    onProgress?.(100);
+    return normalizeFlashcardResponse(response.data);
+  } catch (error) {
+    const axiosLike = error as {
+      response?: { status?: number };
+      code?: string;
+    };
+
+    const hasServerMetadata =
+      typeof axiosLike === 'object' &&
+      axiosLike !== null &&
+      ('response' in axiosLike || 'code' in axiosLike);
+
+    if (hasServerMetadata) {
+      const status = axiosLike.response?.status ?? 0;
+      const shouldFallback = status >= 500 || axiosLike.code === 'ERR_NETWORK';
+
+      if (shouldFallback) {
+        console.warn(
+          'Backend flashcard generation failed; retrying with direct AI fallback.',
+          {
+            status,
+            code: axiosLike.code,
+          },
+        );
+        return generateFlashcardsWithFallback(input, onProgress);
+      }
+    }
+
+    throw error;
+  }
 };
 
 export const chatAboutFlashcardsFromBackend = async (

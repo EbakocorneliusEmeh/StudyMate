@@ -19,11 +19,16 @@ export default function UploadScreen() {
     'idle',
   );
 
-  const uploadToAi = async (uri: string, name: string, type: string) => {
+  const uploadToAi = async (
+    uri: string,
+    name: string,
+    type: string,
+    size?: number,
+  ) => {
     try {
       setStatus('uploading');
       const response = await uploadFile(
-        { uri, name, type },
+        { uri, name, type, size },
         params.sessionId,
         params.sessionId ? `session-${params.sessionId}` : undefined,
       );
@@ -82,6 +87,7 @@ export default function UploadScreen() {
       asset.uri,
       asset.fileName || 'image.jpg',
       asset.mimeType || 'image/jpeg',
+      asset.fileSize,
     );
   };
 
@@ -103,6 +109,7 @@ export default function UploadScreen() {
       asset.uri,
       asset.name,
       asset.mimeType || 'application/pdf',
+      asset.size,
     );
   };
 
@@ -127,6 +134,7 @@ export default function UploadScreen() {
       asset.uri,
       asset.name,
       asset.mimeType || 'application/octet-stream',
+      asset.size,
     );
   };
 

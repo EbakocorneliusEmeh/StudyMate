@@ -79,7 +79,21 @@ export const clearStoredUser = async () => {
 
 export const getToken = async (): Promise<string | null> => {
   try {
-    return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      return token;
+    }
+
+    // Backward compatibility for older installs that stored the token
+    // under the legacy key.
+    const legacyToken = await AsyncStorage.getItem('access_token');
+    if (legacyToken) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, legacyToken);
+      await AsyncStorage.removeItem('access_token');
+      return legacyToken;
+    }
+
+    return null;
   } catch (error) {
     console.error('Failed to get token:', error);
     return null;
@@ -130,7 +144,12 @@ export const refreshAccessToken = async (): Promise<string | null> => {
 
 export const removeToken = async () => {
   try {
-    await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY]);
+    await AsyncStorage.multiRemove([
+      AUTH_TOKEN_KEY,
+      REFRESH_TOKEN_KEY,
+      'access_token',
+      'refresh_token',
+    ]);
   } catch (error) {
     console.error('Failed to remove token:', error);
   }

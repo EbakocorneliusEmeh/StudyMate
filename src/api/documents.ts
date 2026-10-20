@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/api';
 import { DocumentStatusResponse } from '../types';
 import { getToken, refreshAccessToken } from '../utils/storage';
@@ -10,11 +9,7 @@ const makeAuthenticatedRequest = async (
   options: RequestInit,
   retryOnUnauthorized = true,
 ): Promise<Response> => {
-  let token = await getToken();
-  if (!token) {
-    token = await AsyncStorage.getItem('access_token');
-  }
-
+  const token = await getToken();
   if (!token) {
     throw new ApiError('Not authenticated. Please log in.', 401);
   }

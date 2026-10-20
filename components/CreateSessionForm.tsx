@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,16 +10,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { createSession } from '../src/api/sessions';
+import { createSession, StudySession } from '../src/api/sessions';
 
 interface CreateSessionFormProps {
-  onSuccess: () => void;
+  onSuccess: (session: StudySession) => void;
 }
 
 export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
   onSuccess,
 }) => {
-  const router = useRouter();
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   // Logic remains untouched, but we add a local state for the UI level selector
@@ -44,9 +42,8 @@ export const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
       );
       setTitle('');
       setSubject('');
-      onSuccess();
+      onSuccess(newSession);
       Alert.alert('Success', 'Study session created successfully!');
-      router.push(`/session/${newSession.id}`);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to create session';

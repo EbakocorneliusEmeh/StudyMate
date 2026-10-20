@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { API_URL } from '../config/api';
 import { getToken, refreshAccessToken } from '../utils/storage';
 
@@ -94,10 +94,7 @@ const makeAuthenticatedRequest = async (
   options: RequestInit,
   retryOnUnauthorized = true,
 ): Promise<Response> => {
-  let token = await getToken();
-  if (!token) {
-    token = await AsyncStorage.getItem('access_token');
-  }
+  const token = await getToken();
   if (!token) {
     throw new ApiError('Not authenticated. Please log in.', 401);
   }
@@ -122,7 +119,7 @@ const makeAuthenticatedRequest = async (
 
 export const uploadFile = async (
   file:
-    | { uri: string; name: string; type: string }
+    | { uri: string; name: string; type: string; size?: number }
     | { uri: File; name: string; type: string },
   sessionId?: string,
   folder?: string,
@@ -135,24 +132,28 @@ export const uploadFile = async (
   });
 
   try {
-    let token = await getToken();
-    if (!token) {
-      token = await AsyncStorage.getItem('access_token');
-    }
+    const token = await getToken();
     console.log('[Upload] Token exists:', !!token);
 
     if (!token) {
       throw new ApiError('Not authenticated. Please log in.', 401);
     }
 
-    // Create FormData - this handles both file:// URIs and File objects
+    // Validate file size before upload to prevent 413 errors
+    if (typeof file.uri !== 'string' && file.uri.size !== undefined) {
+      const sizeError = validateFile({ type: file.type, size: file.uri.size });
+      if (sizeError) {
+        throw new ApiError(sizeError, 413);
+      }
+    }
+
     const formData = new FormData();
 
-    if (file.uri instanceof File) {
+    if (typeof file.uri !== 'string') {
       // Web: File object
       formData.append('file', file.uri);
     } else {
-      // React Native: string URI
+      // React Native's XHR adapter uploads local file URIs without reading them in JS.
       formData.append('file', {
         uri: file.uri,
         name: file.name,
@@ -172,33 +173,22 @@ export const uploadFile = async (
       `${BACKEND_URL}/api/upload`,
     );
 
-    const response = await fetch(`${BACKEND_URL}/api/upload`, {
-      method: 'POST',
+    const response = await axios.post(`${BACKEND_URL}/api/upload`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
-        // Note: DO NOT set Content-Type for FormData - fetch sets it automatically with boundary
+        'Content-Type': 'multipart/form-data',
       },
-      body: formData,
+      validateStatus: () => true,
     });
 
     console.log('[Upload] Response status:', response.status);
-    console.log('[Upload] Response status text:', response.statusText);
+    const data = response.data;
+    console.log(
+      '[Upload] Response data (truncated):',
+      JSON.stringify(data).slice(0, 200),
+    );
 
-    let data;
-    try {
-      data = await response.json();
-      console.log(
-        '[Upload] Response data (truncated):',
-        JSON.stringify(data).slice(0, 200),
-      );
-    } catch (parseError) {
-      console.error('[Upload] Failed to parse response JSON:', parseError);
-      const text = await response.text();
-      console.log('[Upload] Raw response text:', text.slice(0, 200));
-      throw new ApiError('Invalid response from server', response.status);
-    }
-
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       throw new ApiError(
         data?.message ||
           data?.error ||
